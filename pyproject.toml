@@ -1,0 +1,47 @@
+[project]
+name = "rotor-noise-analysis"
+dynamic = ["version"]
+description = "Rotor noise analysis and visualization tools"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [
+    { name = "MiShore", email = "mishoreyf@nuaa.edu.cn" }
+]
+keywords = ["rotor", "noise", "analysis", "visualization"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+
+dependencies = [
+    "numpy>=1.26.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.8.0",
+    "scipy>=1.11.0",
+    "scienceplots>=2.0.0",
+]
+
+[project.urls]
+Repository = "https://github.com/mishore/rotor-noise-analysis"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/analyzer/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+# 配置 uv 使用清华镜像源加速下载
+[[tool.uv.index]]
+name = "tsinghua"
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
