@@ -13,16 +13,17 @@ output_dir = os.path.join('plot', script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
-    # -----------
+     # -----------
     title = None
     filename = f'OBS{OBS_Number:04d}.png'
-    x_name = 'Time (ms)'
-    y_name = 'Sound Pressure (Pa)'
+    x_name = 'Harmonic Order'
+    y_name = 'SPL (dB)'
     # -----------
-    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case05\Case05_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_2_path = fr'.\Case03\Case03_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
+
     # ----------- 全局尺寸设置
     plt.style.use(['science'])
     # 获取当前颜色循环
@@ -35,55 +36,38 @@ for OBS_Number in OBS_range:
         plot_config = json.load(f)
     # 提取自定义非标准参数，避免 rcParams 报错
     scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
-    
+
     # 更新全局 rcParams
     plt.rcParams.update(plot_config)
-    
+
     # -----------
-    fig, ax = plt.subplots(figsize=(8, 2))  # 创建图形和坐标轴对象
+    fig, ax = plt.subplots()  # 创建图形和坐标轴对象，尺寸由全局配置决定
     ax.set_xlabel(x_name)              # 设置X轴标签
+    ax.set_xlim([-1, 47])
+    ax.xaxis.set_major_locator(MultipleLocator(5))
     ax.set_ylabel(y_name)              # 设置Y轴标签
-    # ax.set_xlim(left = 213, right = 426)
-    # ax.set_ylim(bottom = -2.3, top = 2.3)  # 设置Y轴范围
-    ax.set_title(title) # 设置标题
-    ax.xaxis.set_major_locator(MultipleLocator(50))
-    # ax.xaxis.set_major_locator(MaxNLocator(nbins=9))  # nbins参数控制大致刻度数量
-    #ax.yaxis.set_major_locator(MaxNLocator(nbins=10))  # nbins参数控制大致刻度数量
-    # ----------- 线图
-    data_range = slice(0, 2700)
-    x_data_1, y_data_1 = data_1['Time'][data_range], data_1['Load'][data_range]
-    x_data_2, y_data_2 = data_2['Time'][data_range], data_2['Load'][data_range]
-    ax.plot(x_data_1, y_data_1, label='OWSGE', color='grey', linestyle='-', alpha=0.9, zorder=2)
-    ax.plot(x_data_2, y_data_2, label='IWSGE', color=colors[0], linestyle='--', alpha=0.9, zorder=3)
-    x_min = min(x_data_1.min(), x_data_2.min())
-    x_max = max(x_data_1.max(), x_data_2.max())
-    ax.set_xlim(left=x_min, right=x_max)
-    # -----------
-    # Add alternating background color blocks
-    period_points = 180
-    x_values = x_data_1.values
-    num_points = len(x_values)
-    
-    for i in range(0, num_points, period_points):
-        if (i // period_points) % 2 == 0:
-            start_idx = i
-            end_idx = min(i + period_points - 1, num_points - 1)
-            
-            # Ensure we have valid indices
-            if start_idx < num_points:
-                x_start = x_values[start_idx]
-                x_end = x_values[end_idx]
-                
-                # If end_idx is the last point, we might want to extend slightly if needed, 
-                # but for now let's just use the data points.
-                # Actually, to make it look continuous, we should probably use the start of the next block as the end of the current block
-                # if it exists, to avoid gaps.
-                if i + period_points < num_points:
-                    x_end = x_values[i + period_points]
-                
-                ax.axvspan(x_start, x_end, facecolor='gray', alpha=0.1, zorder=1, linewidth=0)
-    # -----------
-    
+    ax.set_ylim([10, 110])
+    # ----------- 散点图
+    # White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
+    ax.scatter(data_1['Harmonic Order'], data_1['SPL(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
+    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
+    # 数据
+    ax.scatter(data_1['Harmonic Order'], data_1['SPL(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
+    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
+
+    # ----------- 差异连接线 (Difference Lines)
+    x = data_1['Harmonic Order']
+    y1 = data_1['SPL(dB)']
+    y2 = data_2['SPL_FF(dB)']
+    # 确保索引对齐 (Assuming aligned by row index as per user instruction)
+    # 如果需要按列对齐，应在此时确保 x, y1, y2 长度和顺序一致
+    mask_pos = y2 >= y1
+    mask_neg = y2 < y1
+    if mask_pos.any():
+        ax.vlines(x[mask_pos], y1[mask_pos], y2[mask_pos], colors=colors[0], alpha=0.8, zorder=1) # Red-ish
+    if mask_neg.any():
+        ax.vlines(x[mask_neg], y1[mask_neg], y2[mask_neg], colors='grey', alpha=0.5, zorder=1) # Green-ish
+
     # ----------- 图例
     ax.legend(
         ncol=2,                                 # 保持2列布局
@@ -98,4 +82,3 @@ for OBS_Number in OBS_range:
     plt.savefig(os.path.join(output_dir, f'{filename}'), dpi=600)  # 保存图片
     #plt.show()                                     # 显示图形
     print(f"Export plot: {os.path.join(output_dir, f'{filename}')}")
-    

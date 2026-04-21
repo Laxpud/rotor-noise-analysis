@@ -21,7 +21,7 @@ for OBS_Number in OBS_range:
     # -----------
     data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv'
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_2_path = fr'.\Case03\Case03_Rotor_OBS{OBS_Number:04d}_FF.csv'
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
     # ----------- 全局尺寸设置
     plt.style.use(['science'])
@@ -93,7 +93,7 @@ for OBS_Number in OBS_range:
         # frameon=False,                        # 可选：去掉图例边框，更美观
         # handletextpad=0.5,                    # 可选：图例符号与文字的间距
         # columnspacing=1.0                     # 可选：列之间的间距
-    )                                           # 显示图例
+    )                                           # 显示图例                             # 显示图例
     # -----------
     plt.savefig(os.path.join(output_dir, f'{filename}'), dpi=600)  # 保存图片
     #plt.show()                                     # 显示图形
