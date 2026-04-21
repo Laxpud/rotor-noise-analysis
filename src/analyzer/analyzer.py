@@ -59,7 +59,7 @@ class BandContributionAnalyzer:
         
         return bands
     
-    def calculate_band_energy(self, spectrum, bands, p_ref=20-6):
+    def calculate_band_energy(self, spectrum, bands, p_ref=2e-6):
         """
         计算每个频带的能量
         

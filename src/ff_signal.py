@@ -53,25 +53,46 @@ if __name__ == "__main__":
     
     out_prefix = [f"{Sound_FreeField_file_list[i].replace('_FF.csv', '')}" for i in range(len(Sound_FreeField_file_list))]
     SPLs_df = pd.DataFrame(columns=out_prefix)
+    SPLs_thickness_df = pd.DataFrame(columns=out_prefix)
+    SPLs_load_df = pd.DataFrame(columns=out_prefix)
     for i in range(len(Sound_FreeField_file_list)):
         # 读取 Free Field 数据
         Sound_FF = pd.read_csv(f"{file_path}/{Sound_FreeField_file_list[i]}", sep=",", header=0)
         time_signal_FF = np.array([Sound_FF['Time'], Sound_FF['Total']])
+        time_signal_FF_thickness = np.array([Sound_FF['Time'], Sound_FF['Thickness']])
+        time_signal_FF_load = np.array([Sound_FF['Time'], Sound_FF['Load']])
         # 计算 Free Field 数据的频域并导出
         freq_FF, _, amp_fft_FF, SPL_fft_FF = rfft(time_signal_FF)
-        freq_domain_data = np.array([freq_FF, amp_fft_FF, SPL_fft_FF]).T
-        freq_domain_data = pd.DataFrame(freq_domain_data, columns=['Frequency(Hz)', 'amp(Pa)', 'SPL(dB)'])
+        _, _, amp_fft_FF_thickness, SPL_fft_FF_thickness = rfft(time_signal_FF_thickness)
+        _, _, amp_fft_FF_load, SPL_fft_FF_load = rfft(time_signal_FF_load)
+        freq_domain_data = np.array([freq_FF, amp_fft_FF, SPL_fft_FF, amp_fft_FF_thickness, SPL_fft_FF_thickness, amp_fft_FF_load, SPL_fft_FF_load]).T
+        freq_domain_data = pd.DataFrame(freq_domain_data, columns=['Frequency(Hz)', 'amp_Total(Pa)', 'SPL_Total(dB)', 'amp_Thickness(Pa)', 'SPL_Thickness(dB)', 'amp_Load(Pa)', 'SPL_Load(dB)'])
         freq_domain_data.to_csv(f"{file_path}/{out_prefix[i]}_FreqDomain.csv", index=False)
-        print(f"Export freq domain data: {file_path}\\{out_prefix[i]}_FreqDomain.csv")   
+        print(f"Export freq domain data: {file_path}\\{out_prefix[i]}_FreqDomain.csv")
         # 计算 Free Field 时域数据的声压级
         SPL_array = SPLs(time_signal_FF, cycles)
+        SPL_array_thickness = SPLs(time_signal_FF_thickness, cycles)
+        SPL_array_load = SPLs(time_signal_FF_load, cycles)
         SPLs_df[out_prefix[i]] = SPL_array
+        SPLs_thickness_df[out_prefix[i]] = SPL_array_thickness
+        SPLs_load_df[out_prefix[i]] = SPL_array_load
     # 将所有 OBS 的声压级数据
     SPLs_filename_list = [f"{filename_prefix_list[i].split('_')[0]}_SPLs.csv" for i in range(len(filename_prefix_list))]
     for i in range(len(SPLs_filename_list)):
-        data = SPLs_df.iloc[:, i*OBS_Numbers:(i+1)*OBS_Numbers]
-        # 修改列名为 OBS 编号
-        data.columns = [f"OBS{j+1}" for j in range(OBS_Numbers)]
+        # 处理Total数据
+        data_total = SPLs_df.iloc[:, i*OBS_Numbers:(i+1)*OBS_Numbers]
+        data_total.columns = [f"OBS{j+1}_Total" for j in range(OBS_Numbers)]
+
+        # 处理Thickness数据
+        data_thickness = SPLs_thickness_df.iloc[:, i*OBS_Numbers:(i+1)*OBS_Numbers]
+        data_thickness.columns = [f"OBS{j+1}_Thickness" for j in range(OBS_Numbers)]
+
+        # 处理Load数据
+        data_load = SPLs_load_df.iloc[:, i*OBS_Numbers:(i+1)*OBS_Numbers]
+        data_load.columns = [f"OBS{j+1}_Load" for j in range(OBS_Numbers)]
+
+        # 合并数据
+        data = pd.concat([data_total, data_thickness, data_load], axis=1)
         # 在第一列插入一个名为 Cycles 的列，值为 1到 cycles
         data.insert(0, 'Cycles', range(1, cycles+1))
         # 输出结果，小数点后保留5位
