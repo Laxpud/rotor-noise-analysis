@@ -1,0 +1,37 @@
+{
+  "figure.figsize": [4, 2],
+  "figure.dpi": 1000,
+           
+  "font.size": 7.5,
+
+  "axes.titlesize": 7.5,              
+  "axes.labelsize": 7.5,              
+  "axes.linewidth": 0.35, 
+  "axes.labelpad": 3.0,            
+  "axes.grid": true,                 
+  "grid.alpha": 0.3,
+  "grid.linewidth": 0.35,
+  "grid.linestyle": "-",
+  
+  "xtick.top": true,
+  "xtick.bottom": true,
+  "xtick.major.size": 1.5,
+  "xtick.major.width": 0.35,
+  "xtick.minor.size": 0.75,
+  "xtick.minor.width": 0.35,
+  "ytick.left": true,
+  "ytick.right": true,
+  "ytick.major.size": 1.5,
+  "ytick.major.width": 0.35,
+  "ytick.minor.size": 0.75,
+  "ytick.minor.width": 0.35,
+
+  "lines.linewidth": 0.75,
+  "lines.markersize": 3,
+
+  "legend.frameon": false,
+  "legend.framealpha": 0.8,
+
+
+  "scatter.linewidths": 0.35
+}

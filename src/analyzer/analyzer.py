@@ -3,13 +3,15 @@ from scipy import signal
 
 class BandContributionAnalyzer:
     """频带贡献分析器 - 用于分析频谱能量在不同频带的分布"""
-    
-    def __init__(self, freqs):
+
+    def __init__(self, freqs, reference_pressure: float = 2e-6):
         """
         参数:
             freqs: 原始频率数据数组
+            reference_pressure: 参考声压，默认2e-6 Pa
         """
         self.freqs = np.asarray(freqs)
+        self.reference_pressure = reference_pressure
     
     def create_octave_bands(self, fraction=3, f_low=10, f_high=20000):
         """
@@ -59,37 +61,40 @@ class BandContributionAnalyzer:
         
         return bands
     
-    def calculate_band_energy(self, spectrum, bands, p_ref=2e-6):
+    def calculate_band_energy(self, spectrum, bands, p_ref=None):
         """
         计算每个频带的能量
-        
+
         参数:
             spectrum: 频谱幅值（线性）
             bands: 频带列表
-            p_ref: 参考声压值 (默认2e-6)
-            
+            p_ref: 参考声压值，如不提供则使用实例初始化时的值
+
         返回:
             band_energies: 频带能量字典
         """
+        if p_ref is None:
+            p_ref = self.reference_pressure
+
         band_energies = []
-        
+
         for band in bands:
             # 找到频带内的频率索引
             indices = np.where((self.freqs >= band['lower']) & (self.freqs <= band['upper']))[0]
-            
+
             if len(indices) > 0:
                 # 计算频带内的能量（频谱幅值的平方和）
                 band_spectrum = spectrum[indices]
                 energy = np.sum(band_spectrum ** 2)
-                
+
                 # 计算等效声压级（假设频谱已校准）
                 # 这里简化处理，实际应用中需要根据校准系数调整
                 energy_dB = 10 * np.log10(energy / (p_ref**2) + 1e-12)  # 避免log(0)
-                
+
                 # 计算能量占比
                 total_energy = np.sum(spectrum ** 2)
                 energy_ratio = energy / total_energy if total_energy > 0 else 0
-                
+
                 band_energies.append({
                     'center_freq': band['center'],
                     'energy': energy,
@@ -97,23 +102,26 @@ class BandContributionAnalyzer:
                     'energy_ratio': energy_ratio,
                     'indices': indices
                 })
-        
+
         return band_energies
     
-    def analyze_band_contribution(self, spectrum, method='octave', fraction=3, f_low=10, p_ref=2e-6):
+    def analyze_band_contribution(self, spectrum, method='octave', fraction=3, f_low=10, p_ref=None):
         """
         分析频带贡献
-        
+
         参数:
             spectrum: 频谱幅值
             method: 分析方法 ('octave'或'custom')
             fraction: 倍频程分数
             f_low: 最低中心频率 (默认10Hz)
-            p_ref: 参考声压值 (默认2e-6)
-            
+            p_ref: 参考声压值，如不提供则使用实例初始化时的值
+
         返回:
             analysis_result: 分析结果
         """
+        if p_ref is None:
+            p_ref = self.reference_pressure
+
         if method == 'octave':
             bands = self.create_octave_bands(fraction=fraction, f_low=f_low)
             band_energies = self.calculate_band_energy(spectrum, bands, p_ref=p_ref)
