@@ -413,11 +413,11 @@ class EnhancedBandContributionAnalyzer(BandContributionAnalyzer):
                 global_stats[f'{source_name}_{band_name}_energy'] = energy
                 global_stats[f'{source_name}_{band_name}_ratio'] = ratio
 
-        # 谐频总占比
+        # 谐频相对于（谐频+宽频）的能量占比
         if 'harmonic' in source_energies and 'broadband' in source_energies:
             harmonic_total = source_energies['harmonic']
             broadband_total = source_energies['broadband']
-            global_stats['harmonic_total_ratio'] = harmonic_total / (harmonic_total + broadband_total) if (harmonic_total + broadband_total) > 0 else 0.0
+            global_stats['harmonic_to_broadband_ratio'] = harmonic_total / (harmonic_total + broadband_total) if (harmonic_total + broadband_total) > 0 else 0.0
 
         return global_stats
 

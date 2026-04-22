@@ -53,9 +53,9 @@ def run_source_analysis(
 ):
     """运行源项频域贡献量化分析"""
     if has_reflection:
-        from analysis_source01 import SourceContributionAnalyze
+        from analysis_source_cases import SourceContributionAnalyze
     else:
-        from analysis_source import SourceContributionAnalyze
+        from analysis_source_cases01 import SourceContributionAnalyze
 
     print(f"Running source contribution analysis on {file_path}...")
     if fundamental_freq is not None:
