@@ -7,6 +7,8 @@ import pandas as pd
 from typing import Dict, List, Tuple, Optional
 from scipy.signal import find_peaks
 from .analyzer import PeakFrequencyAnalyzer, BandContributionAnalyzer
+from .utils import rfft
+P_REF = 20e-6  # 和utils中保持一致的参考声压（空气声学标准）
 
 
 class FrequencySeparator:
@@ -263,13 +265,13 @@ class EnhancedBandContributionAnalyzer(BandContributionAnalyzer):
     增强的频带贡献分析器，支持多噪声源的贡献分析
     """
 
-    def __init__(self, frequencies: np.ndarray, reference_pressure: float = 2e-6):
+    def __init__(self, frequencies: np.ndarray, reference_pressure: float = P_REF):
         """
         初始化增强的频带贡献分析器
 
         参数:
             frequencies: 频率数组
-            reference_pressure: 参考声压，默认2e-6 Pa
+            reference_pressure: 参考声压，默认和utils保持一致（2e-5 Pa，空气声学标准）
         """
         super().__init__(frequencies, reference_pressure)
 
@@ -430,14 +432,14 @@ class SourceContributionAnalyzer:
     def __init__(
         self,
         frequencies: np.ndarray,
-        reference_pressure: float = 2e-6
+        reference_pressure: float = P_REF
     ):
         """
         初始化源项贡献分析器
 
         参数:
             frequencies: 频率数组
-            reference_pressure: 参考声压
+            reference_pressure: 参考声压，默认和utils保持一致（2e-5 Pa，空气声学标准）
         """
         self.freqs = frequencies
         self.ref_pressure = reference_pressure
@@ -596,10 +598,10 @@ class SourceContributionAnalyzer:
                 'actual_freq': actual_freq
             }
 
-            # 各源在该谐频点的幅值和SPL
+            # 各源在该谐频点的幅值和SPL（和utils.rfft计算方式保持一致）
             for source_name, spectrum in spectra_dict.items():
                 amp = spectrum[max_idx]
-                spl = 10 * np.log10((amp ** 2) / (self.ref_pressure ** 2) + 1e-12) if amp > 0 else -np.inf
+                spl = 20 * np.log10(amp / self.ref_pressure + 1e-12) if amp > 0 else -np.inf
                 harmonic_result[f'{source_name}_amp'] = amp
                 harmonic_result[f'{source_name}_spl'] = spl
 
@@ -637,7 +639,8 @@ class SourceContributionAnalyzer:
 
         for source_name, spectrum in spectra_dict.items():
             data[f'{source_name}_amp(Pa)'] = spectrum
-            data[f'{source_name}_SPL(dB)'] = 10 * np.log10((spectrum ** 2) / (self.ref_pressure ** 2) + 1e-12)
+            # 和utils.rfft中保持一致的SPL计算方式
+            data[f'{source_name}_SPL(dB)'] = 20 * np.log10(spectrum / self.ref_pressure + 1e-12)
             # 能量（Pa²·Hz）
             data[f'{source_name}_energy'] = spectrum ** 2
 

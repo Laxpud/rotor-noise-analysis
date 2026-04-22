@@ -175,9 +175,9 @@ def BandCountributionAnalyze(file_path, filename_prefix, group_prefixes=None):
 
 if __name__ == "__main__":
 
-    file_path = r"Case03"
+    file_path = r"Case05"
     Filename_list = [
-        "Case03_Rotor",
+        "Case05_Rotor",
     ]
     OBS_Numbers = 12
     OBS_Position_list = np.array([

@@ -49,16 +49,16 @@ for OBS_Number in OBS_range:
     ax.set_ylim([10, 110])
     # ----------- 散点图
     # White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
-    ax.scatter(data_1['Harmonic Order'], data_1['SPL(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
-    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
+    ax.scatter(data_1['Harmonic Order'], data_1['SPL_Total(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
+    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Total(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
     # 数据
-    ax.scatter(data_1['Harmonic Order'], data_1['SPL(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
-    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
+    ax.scatter(data_1['Harmonic Order'], data_1['SPL_Total(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
+    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Total(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
 
     # ----------- 差异连接线 (Difference Lines)
     x = data_1['Harmonic Order']
-    y1 = data_1['SPL(dB)']
-    y2 = data_2['SPL_FF(dB)']
+    y1 = data_1['SPL_Total(dB)']
+    y2 = data_2['SPL_FF_Total(dB)']
     # 确保索引对齐 (Assuming aligned by row index as per user instruction)
     # 如果需要按列对齐，应在此时确保 x, y1, y2 长度和顺序一致
     mask_pos = y2 >= y1

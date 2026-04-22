@@ -4,11 +4,11 @@ from scipy import signal
 class BandContributionAnalyzer:
     """频带贡献分析器 - 用于分析频谱能量在不同频带的分布"""
 
-    def __init__(self, freqs, reference_pressure: float = 2e-6):
+    def __init__(self, freqs, reference_pressure: float = 20e-6):
         """
         参数:
             freqs: 原始频率数据数组
-            reference_pressure: 参考声压，默认2e-6 Pa
+            reference_pressure: 参考声压，默认20e-6 Pa（空气声学标准，和utils保持一致）
         """
         self.freqs = np.asarray(freqs)
         self.reference_pressure = reference_pressure
