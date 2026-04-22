@@ -24,84 +24,140 @@ def PeakFrequenceAnalyze(file_path, filename_prefix):
         # 读取频率域线性幅值数据
         freq_domain_data = pd.read_csv(f"{file_path}\\{filename_prefix[i]}_FreqDomain.csv", header=0, sep=',')
         freq = freq_domain_data['Frequency(Hz)']
-        amp_merged = freq_domain_data['amp_merged(Pa)']
-        SPL_FF = freq_domain_data['SPL_FF(dB)']
-        SPL_SR = freq_domain_data['SPL_SR(dB)']
-        SPL_merged = freq_domain_data['SPL_merged(dB)']   
+        # Total分量
+        amp_merged_Total = freq_domain_data['amp_merged_Total(Pa)']
+        SPL_FF_Total = freq_domain_data['SPL_FF_Total(dB)']
+        SPL_SR_Total = freq_domain_data['SPL_SR_Total(dB)']
+        SPL_merged_Total = freq_domain_data['SPL_merged_Total(dB)']
+        # Thickness分量
+        SPL_FF_Thickness = freq_domain_data['SPL_FF_Thickness(dB)']
+        SPL_SR_Thickness = freq_domain_data['SPL_SR_Thickness(dB)']
+        SPL_merged_Thickness = freq_domain_data['SPL_merged_Thickness(dB)']
+        # Load分量
+        SPL_FF_Load = freq_domain_data['SPL_FF_Load(dB)']
+        SPL_SR_Load = freq_domain_data['SPL_SR_Load(dB)']
+        SPL_merged_Load = freq_domain_data['SPL_merged_Load(dB)']
 
-        # 峰值分析
+        # 峰值分析（使用Total分量的峰值索引，保持对齐）
         analyzer = PeakFrequencyAnalyzer(freq.values)
-        result = analyzer.analyze_spectrum(amp_merged.values, prominence=0.005)
+        result = analyzer.analyze_spectrum(amp_merged_Total.values, prominence=0.005)
         harmonic_indices = result['harmonic_indices']
         harmonic_freq = freq[harmonic_indices]
-        harmonic_SPL_FF = SPL_FF[harmonic_indices]
-        harmonic_SPL_SR = SPL_SR[harmonic_indices]
-        harmonic_SPL_merged = SPL_merged[harmonic_indices]
-        
+        # 提取各分量的SPL
+        harmonic_SPL_FF_Total = SPL_FF_Total[harmonic_indices]
+        harmonic_SPL_SR_Total = SPL_SR_Total[harmonic_indices]
+        harmonic_SPL_merged_Total = SPL_merged_Total[harmonic_indices]
+        harmonic_SPL_FF_Thickness = SPL_FF_Thickness[harmonic_indices]
+        harmonic_SPL_SR_Thickness = SPL_SR_Thickness[harmonic_indices]
+        harmonic_SPL_merged_Thickness = SPL_merged_Thickness[harmonic_indices]
+        harmonic_SPL_FF_Load = SPL_FF_Load[harmonic_indices]
+        harmonic_SPL_SR_Load = SPL_SR_Load[harmonic_indices]
+        harmonic_SPL_merged_Load = SPL_merged_Load[harmonic_indices]
+
         # 输出到文件
         output_data = pd.DataFrame({
             'Harmonic Order': np.arange(1, len(harmonic_freq) + 1),
             'Frequency(Hz)': harmonic_freq,
-            'SPL_FF(dB)': harmonic_SPL_FF,
-            'SPL_SR(dB)': harmonic_SPL_SR,
-            'SPL_merged(dB)': harmonic_SPL_merged,
+            'SPL_FF_Total(dB)': harmonic_SPL_FF_Total,
+            'SPL_SR_Total(dB)': harmonic_SPL_SR_Total,
+            'SPL_merged_Total(dB)': harmonic_SPL_merged_Total,
+            'SPL_FF_Thickness(dB)': harmonic_SPL_FF_Thickness,
+            'SPL_SR_Thickness(dB)': harmonic_SPL_SR_Thickness,
+            'SPL_merged_Thickness(dB)': harmonic_SPL_merged_Thickness,
+            'SPL_FF_Load(dB)': harmonic_SPL_FF_Load,
+            'SPL_SR_Load(dB)': harmonic_SPL_SR_Load,
+            'SPL_merged_Load(dB)': harmonic_SPL_merged_Load,
         })
         output_data.to_csv(f"{file_path}\\{filename_prefix[i]}_Harmonics.csv", index=False)
 
 def BandCountributionAnalyze(file_path, filename_prefix, group_prefixes=None):
     summary_list = []
-    
+
     for i in range(len(filename_prefix)):
         # 读取频率域线性幅值数据
         freq_domain_data = pd.read_csv(f"{file_path}\\{filename_prefix[i]}_FreqDomain.csv", header=0, sep=',')
         freq = freq_domain_data['Frequency(Hz)']
-        amp_merged = freq_domain_data['amp_merged(Pa)']
+        amp_merged_Total = freq_domain_data['amp_merged_Total(Pa)']
+        amp_merged_Thickness = freq_domain_data['amp_merged_Thickness(Pa)']
+        amp_merged_Load = freq_domain_data['amp_merged_Load(Pa)']
 
-        # 带宽分析
-        analyzer = BandContributionAnalyzer(freq.values)
-        result = analyzer.analyze_band_contribution(amp_merged.values)
-        
-        if not result:
-            continue
-            
-        # 1. 保存详细频带数据
-        band_energies = result['band_energies']
-        detail_df = pd.DataFrame({
-            'Center Frequency(Hz)': [b['center_freq'] for b in band_energies],
-            'Energy': [b['energy'] for b in band_energies],
-            'SPL(dB)': [b['energy_dB'] for b in band_energies],
-            'Energy Ratio': [b['energy_ratio'] for b in band_energies]
-        })
-        detail_df.to_csv(f"{file_path}\\{filename_prefix[i]}_BandContribution.csv", index=False)
-        
-        # 2. 收集汇总数据
-        total_energy = result['total_energy']
-        energy_dist = result['energy_distribution']
-        dominant_band = result['dominant_band']
-        
-        summary_item = {
-            'Filename': filename_prefix[i],
-            'Total Energy': total_energy,
-            'Dominant Freq(Hz)': dominant_band['center_freq'],
-            'Dominant Ratio': dominant_band['energy_ratio'],
-            'Low Freq Energy': energy_dist['low_freq'],
-            'Mid Freq Energy': energy_dist['mid_freq'],
-            'High Freq Energy': energy_dist['high_freq'],
-            'Low Freq Ratio': energy_dist['low_freq'] / total_energy if total_energy > 0 else 0,
-            'Mid Freq Ratio': energy_dist['mid_freq'] / total_energy if total_energy > 0 else 0,
-            'High Freq Ratio': energy_dist['high_freq'] / total_energy if total_energy > 0 else 0
-        }
-        summary_list.append(summary_item)
+        # 定义分量处理函数
+        def process_component(amp, component_name):
+            # 带宽分析
+            analyzer = BandContributionAnalyzer(freq.values)
+            result = analyzer.analyze_band_contribution(amp.values)
+
+            if not result:
+                return None, None
+
+            # 详细频带数据
+            band_energies = result['band_energies']
+            detail_data = {
+                'Center Frequency(Hz)': [b['center_freq'] for b in band_energies],
+                f'Energy_{component_name}': [b['energy'] for b in band_energies],
+                f'SPL_{component_name}(dB)': [b['energy_dB'] for b in band_energies],
+                f'Energy Ratio_{component_name}': [b['energy_ratio'] for b in band_energies]
+            }
+
+            # 汇总数据
+            total_energy = result['total_energy']
+            energy_dist = result['energy_distribution']
+            dominant_band = result['dominant_band']
+
+            summary_item = {
+                'Filename': filename_prefix[i],
+                f'Total Energy_{component_name}': total_energy,
+                f'Dominant Freq_{component_name}(Hz)': dominant_band['center_freq'],
+                f'Dominant Ratio_{component_name}': dominant_band['energy_ratio'],
+                f'Low Freq Energy_{component_name}': energy_dist['low_freq'],
+                f'Mid Freq Energy_{component_name}': energy_dist['mid_freq'],
+                f'High Freq Energy_{component_name}': energy_dist['high_freq'],
+                f'Low Freq Ratio_{component_name}': energy_dist['low_freq'] / total_energy if total_energy > 0 else 0,
+                f'Mid Freq Ratio_{component_name}': energy_dist['mid_freq'] / total_energy if total_energy > 0 else 0,
+                f'High Freq Ratio_{component_name}': energy_dist['high_freq'] / total_energy if total_energy > 0 else 0
+            }
+            return detail_data, summary_item
+
+        # 处理三个分量并合并数据
+        all_detail_data = {}
+        combined_summary = {'Filename': filename_prefix[i]}
+        for component, amp in [('Total', amp_merged_Total), ('Thickness', amp_merged_Thickness), ('Load', amp_merged_Load)]:
+            detail_data, summary_item = process_component(amp, component)
+            if detail_data and summary_item:
+                all_detail_data.update(detail_data)
+                combined_summary.update(summary_item)
+
+        # 输出合并后的详细频带数据
+        if all_detail_data:
+            detail_df = pd.DataFrame(all_detail_data)
+            # 调整列顺序，把中心频率放在最前面
+            columns = ['Center Frequency(Hz)'] + [col for col in detail_df.columns if col != 'Center Frequency(Hz)']
+            detail_df = detail_df[columns]
+            detail_df.to_csv(f"{file_path}\\{filename_prefix[i]}_BandContribution.csv", index=False)
+
+        # 添加汇总数据
+        if combined_summary:
+            summary_list.append(combined_summary)
     
     # 保存汇总数据
     if summary_list:
         summary_df = pd.DataFrame(summary_list)
-        # 调整列顺序
-        columns_order = [
-            'Filename', 'Total Energy', 'Dominant Freq(Hz)', 'Dominant Ratio',
-            'Low Freq Energy', 'Mid Freq Energy', 'High Freq Energy',
-            'Low Freq Ratio', 'Mid Freq Ratio', 'High Freq Ratio'
-        ]
+        # 调整列顺序，按分量分组
+        columns_order = ['Filename']
+        for component in ['Total', 'Thickness', 'Load']:
+            columns_order.extend([
+                f'Total Energy_{component}',
+                f'Dominant Freq_{component}(Hz)',
+                f'Dominant Ratio_{component}',
+                f'Low Freq Energy_{component}',
+                f'Mid Freq Energy_{component}',
+                f'High Freq Energy_{component}',
+                f'Low Freq Ratio_{component}',
+                f'Mid Freq Ratio_{component}',
+                f'High Freq Ratio_{component}'
+            ])
+        # 确保列存在
+        columns_order = [col for col in columns_order if col in summary_df.columns]
         summary_df = summary_df[columns_order]
         
         if group_prefixes:
@@ -114,7 +170,7 @@ def BandCountributionAnalyze(file_path, filename_prefix, group_prefixes=None):
                     group_df.to_csv(f"{file_path}\\{prefix}_BandContribution_Summary.csv", index=False)
         else:
             # 如果没有提供前缀，保存为一个总文件
-            summary_df.to_csv(f"{file_path}\\Case04_BandContribution_Summary.csv", index=False)
+            summary_df.to_csv(f"{file_path}\\BandContribution_Summary.csv", index=False)
         
 
 if __name__ == "__main__":
