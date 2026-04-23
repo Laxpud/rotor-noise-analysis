@@ -394,9 +394,9 @@ def SourceContributionAnalyze(
 
 if __name__ == "__main__":
     # 示例配置 - 请根据实际情况修改
-    file_path = r"Case03"
+    file_path = r"Case04"
     Filename_list = [
-        "Case03_Rotor",
+        "Case04_Rotor",
     ]
     OBS_Numbers = 12
     OBS_Position_list = np.array(
@@ -435,4 +435,5 @@ if __name__ == "__main__":
         filename_prefix=filename_prefix,
         group_prefixes=Filename_list,
         # fundamental_freq=fundamental_freq
+        max_harmonic_order=45,
     )
