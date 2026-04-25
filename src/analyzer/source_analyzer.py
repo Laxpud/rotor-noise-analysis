@@ -121,101 +121,31 @@ class LoadNoiseSeparator:
 
         return harmonic_indices_list
 
-    def calculate_correlation(
-        self,
-        load_spectrum: np.ndarray,
-        thickness_spectrum: np.ndarray,
-        harmonic_indices_list: List[np.ndarray]
-    ) -> float:
-        """
-        计算谐频范围内载荷噪声与厚度噪声的频谱相关性
-
-        参数:
-            load_spectrum: 载荷噪声频谱
-            thickness_spectrum: 厚度噪声频谱
-            harmonic_indices_list: 谐频索引列表
-
-        返回:
-            correlation: 相关系数
-        """
-        # 收集所有谐频点的数据
-        load_harmonic = []
-        thickness_harmonic = []
-
-        for indices in harmonic_indices_list:
-            load_harmonic.extend(load_spectrum[indices])
-            thickness_harmonic.extend(thickness_spectrum[indices])
-
-        if len(load_harmonic) < 2:
-            return 0.0
-
-        # 计算相关系数
-        correlation = np.corrcoef(load_harmonic, thickness_harmonic)[0, 1]
-        return max(0.0, correlation)  # 保证非负
-
-    def extract_steady_component(
-        self,
-        load_spectrum: np.ndarray,
-        thickness_spectrum: np.ndarray,
-        harmonic_indices_list: List[np.ndarray],
-        correlation: float
-    ) -> np.ndarray:
-        """
-        提取定常载荷噪声成分
-
-        参数:
-            load_spectrum: 原始载荷噪声频谱
-            thickness_spectrum: 厚度噪声频谱
-            harmonic_indices_list: 谐频索引列表
-            correlation: 载荷与厚度噪声的相关系数
-
-        返回:
-            steady_load: 定常载荷噪声频谱
-        """
-        steady_load = np.zeros_like(load_spectrum)
-
-        # 仅在谐频范围内提取定常成分
-        for indices in harmonic_indices_list:
-            # 定常载荷与厚度噪声成比例，比例系数由相关性决定
-            # 这里假设谐频位置的载荷噪声中，与厚度噪声相关的部分为定常载荷
-            thickness_amp = thickness_spectrum[indices]
-            load_amp = load_spectrum[indices]
-
-            # 计算比例系数，避免除零
-            ratio = np.divide(
-                load_amp,
-                thickness_amp,
-                out=np.zeros_like(load_amp),
-                where=thickness_amp > 1e-10
-            )
-
-            # 使用加权比例，相关性越高，定常成分占比越大
-            steady_ratio = np.clip(correlation, 0.2, 0.8)  # 限制在合理范围内
-            steady_load[indices] = load_amp * steady_ratio
-
-        return steady_load
-
     def separate_load_noise(
         self,
-        load_spectrum: np.ndarray,
-        thickness_spectrum: np.ndarray,
+        load_complex: np.ndarray,
+        thickness_complex: np.ndarray,
         fundamental_freq: float,
         max_harmonic_order: int = 30,
-        bandwidth_ratio: float = 0.03
-    ) -> Tuple[np.ndarray, np.ndarray]:
+        bandwidth_ratio: float = 0.03,
+        check_phase_consistency: bool = False
+    ) -> Tuple[np.ndarray, np.ndarray, Dict]:
         """
-        分离定常和非定常载荷噪声
+        基于相位约束法分离定常和非定常载荷噪声
+        以厚度噪声相位为基准，将载荷噪声投影到基准相位轴，同相分量为定常载荷，正交分量为非定常载荷
 
         参数:
-            load_spectrum: 载荷噪声频谱幅值
-            thickness_spectrum: 厚度噪声频谱幅值（作为参考）
+            load_complex: 载荷噪声复数频谱
+            thickness_complex: 厚度噪声复数频谱（作为相位基准）
             fundamental_freq: 基频频率（叶片通过频率）
             max_harmonic_order: 最大谐频阶数
             bandwidth_ratio: 谐频带宽比
+            check_phase_consistency: 是否检查相位一致性，返回相位统计信息
 
         返回:
-            steady_load: 定常载荷噪声频谱
-            unsteady_load: 非定常载荷噪声频谱
+            steady_load_amp: 定常载荷噪声幅值频谱
+            unsteady_load_amp: 非定常载荷噪声幅值频谱
+            phase_stats: 相位统计信息（仅当check_phase_consistency=True时返回有效数据）
         """
         # 1. 识别谐频带
         harmonic_indices_list = self.identify_harmonic_bands(
@@ -224,40 +154,85 @@ class LoadNoiseSeparator:
             bandwidth_ratio
         )
 
-        if not harmonic_indices_list:
-            # 没有识别到谐频，所有载荷都视为非定常
-            return np.zeros_like(load_spectrum), load_spectrum.copy()
+        # 初始化定常和非定常复数频谱
+        steady_load_complex = np.zeros_like(load_complex)
+        unsteady_load_complex = np.zeros_like(load_complex)
 
-        # 2. 计算相关性
-        correlation = self.calculate_correlation(
-            load_spectrum,
-            thickness_spectrum,
-            harmonic_indices_list
-        )
+        phase_stats = {
+            'phase_diffs': [],
+            'phase_diff_variances': []
+        }
 
-        # 3. 提取定常成分
-        steady_load = self.extract_steady_component(
-            load_spectrum,
-            thickness_spectrum,
-            harmonic_indices_list,
-            correlation
-        )
+        if harmonic_indices_list:
+            # 2. 逐个处理各阶谐频带
+            for indices in harmonic_indices_list:
+                # 提取谐频带内的复数频谱
+                thick_complex_band = thickness_complex[indices]
+                load_complex_band = load_complex[indices]
 
-        # 4. 非定常成分 = 总载荷 - 定常成分
-        unsteady_load = load_spectrum - steady_load
+                # 计算厚度噪声在该谐频带的平均相位作为基准相位
+                thick_phases = np.angle(thick_complex_band)
+                # 相位解缠绕后取平均，避免边界跳变影响
+                unwrapped_thick_phases = np.unwrap(thick_phases)
+                ref_phase = np.mean(unwrapped_thick_phases)
 
-        # 确保非负
-        unsteady_load = np.maximum(unsteady_load, 0)
+                # 计算载荷噪声在该谐频带的相位
+                load_phases = np.angle(load_complex_band)
+                unwrapped_load_phases = np.unwrap(load_phases)
 
-        # 能量守恒验证
-        original_energy = np.sum(load_spectrum ** 2)
-        separated_energy = np.sum(steady_load ** 2) + np.sum(unsteady_load ** 2)
+                # 计算相位差
+                phase_diffs = unwrapped_load_phases - ref_phase
+                # 将相位差限制在[-π, π]范围内
+                phase_diffs = np.mod(phase_diffs + np.pi, 2 * np.pi) - np.pi
+
+                if check_phase_consistency:
+                    phase_stats['phase_diffs'].extend(phase_diffs.tolist())
+                    phase_stats['phase_diff_variances'].append(np.var(phase_diffs))
+
+                # 计算载荷幅值
+                load_amps = np.abs(load_complex_band)
+
+                # 同相分量（定常载荷）：幅值 * cos(相位差)，相位与基准相位一致
+                steady_amps = load_amps * np.cos(phase_diffs)
+                steady_complex_band = steady_amps * np.exp(1j * ref_phase)
+
+                # 正交分量（非定常载荷）：幅值 * sin(相位差)，相位比基准相位超前π/2
+                unsteady_amps = load_amps * np.sin(phase_diffs)
+                unsteady_complex_band = unsteady_amps * np.exp(1j * (ref_phase + np.pi/2))
+
+                # 赋值到结果数组
+                steady_load_complex[indices] = steady_complex_band
+                unsteady_load_complex[indices] = unsteady_complex_band
+
+        # 3. 宽频区域（谐频带外）的载荷全部作为非定常载荷
+        all_harmonic_indices = np.concatenate(harmonic_indices_list) if harmonic_indices_list else np.array([], dtype=int)
+        broadband_mask = np.ones(len(self.freqs), dtype=bool)
+        broadband_mask[all_harmonic_indices] = False
+        unsteady_load_complex[broadband_mask] = load_complex[broadband_mask]
+
+        # 4. 能量守恒验证
+        original_energy = np.sum(np.abs(load_complex) ** 2)
+        separated_energy = np.sum(np.abs(steady_load_complex) ** 2) + np.sum(np.abs(unsteady_load_complex) ** 2)
         energy_error = abs(separated_energy - original_energy) / original_energy if original_energy > 0 else 0
 
-        if energy_error > 0.01:  # 允许1%的误差
+        if energy_error > 0.001:  # 本项目要求严格，允许0.1%的误差
             print(f"Warning: Energy conservation error {energy_error:.2%} in load separation")
 
-        return steady_load, unsteady_load
+        # 5. 提取幅值频谱返回（保持与原有接口兼容）
+        steady_load_amp = np.abs(steady_load_complex)
+        unsteady_load_amp = np.abs(unsteady_load_complex)
+
+        # 6. 相位一致性统计
+        if check_phase_consistency and phase_stats['phase_diffs']:
+            phase_stats['mean_phase_diff'] = np.mean(phase_stats['phase_diffs'])
+            phase_stats['overall_phase_diff_variance'] = np.var(phase_stats['phase_diffs'])
+            phase_stats['max_phase_diff_variance'] = np.max(phase_stats['phase_diff_variances']) if phase_stats['phase_diff_variances'] else 0.0
+            # 转换为角度更直观
+            phase_stats['mean_phase_diff_deg'] = np.rad2deg(phase_stats['mean_phase_diff'])
+            phase_stats['overall_phase_diff_variance_deg'] = np.rad2deg(phase_stats['overall_phase_diff_variance'])
+            phase_stats['max_phase_diff_variance_deg'] = np.rad2deg(phase_stats['max_phase_diff_variance'])
+
+        return steady_load_amp, unsteady_load_amp, phase_stats
 
 
 class EnhancedBandContributionAnalyzer(BandContributionAnalyzer):
@@ -452,24 +427,25 @@ class SourceContributionAnalyzer:
 
     def analyze(
         self,
-        thickness_spectrum: np.ndarray,
-        load_spectrum: np.ndarray,
-        total_spectrum: Optional[np.ndarray] = None,
+        thickness_complex: np.ndarray,
+        load_complex: np.ndarray,
+        total_complex: Optional[np.ndarray] = None,
         fundamental_freq: Optional[float] = None,
         harmonic_bandwidth_ratio: float = 0.03,
         max_harmonic_order: int = 30,
         band_type: str = 'octave',
         band_fraction: int = 3,
         band_f_low: float = 10,
-        band_f_high: float = 20000
+        band_f_high: float = 20000,
+        check_phase_consistency: bool = False
     ) -> Dict:
         """
-        执行完整的源项贡献分析
+        执行完整的源项贡献分析（基于相位约束法）
 
         参数:
-            thickness_spectrum: 厚度噪声频谱幅值
-            load_spectrum: 载荷噪声频谱幅值
-            total_spectrum: 总噪声频谱幅值，如不提供则由厚度+载荷合成
+            thickness_complex: 厚度噪声复数频谱
+            load_complex: 载荷噪声复数频谱
+            total_complex: 总噪声复数频谱，如不提供则由厚度+载荷合成
             fundamental_freq: 基频频率，如不提供则自动识别
             harmonic_bandwidth_ratio: 谐频带宽比
             max_harmonic_order: 最大谐频阶数
@@ -477,17 +453,23 @@ class SourceContributionAnalyzer:
             band_fraction: 倍频程分数
             band_f_low: 最低分析频率
             band_f_high: 最高分析频率
+            check_phase_consistency: 是否检查相位一致性，会在结果中添加相位统计信息
 
         返回:
             results: 包含所有分析结果的字典
         """
+        # 提取幅值频谱用于后续分析（保持兼容）
+        thickness_spectrum = np.abs(thickness_complex)
+        load_spectrum = np.abs(load_complex)
+
         # 合成总频谱（如果未提供）
-        if total_spectrum is None:
-            total_spectrum = thickness_spectrum + load_spectrum
+        if total_complex is None:
+            total_complex = thickness_complex + load_complex
+        total_spectrum = np.abs(total_complex)
 
         # 1. 谐频识别
         if fundamental_freq is None:
-            # 自动识别基频
+            # 自动识别基频（基于总幅值频谱，和原有逻辑保持一致）
             peak_result = self.peak_analyzer.analyze_spectrum(total_spectrum)
             fundamental_freq = peak_result['fundamental_freq']
             harmonic_freqs = peak_result['harmonic_freqs']
@@ -497,20 +479,21 @@ class SourceContributionAnalyzer:
             # 过滤掉超过频率范围的谐频
             harmonic_freqs = harmonic_freqs[harmonic_freqs <= self.freqs.max()]
 
-        # 2. 谐频与宽频分离（基于总频谱）
+        # 2. 谐频与宽频分离（基于总幅值频谱，和原有逻辑保持一致）
         harmonic_spectrum, broadband_spectrum = self.freq_separator.separate_by_harmonic_extraction(
             total_spectrum,
             harmonic_freqs,
             harmonic_bandwidth_ratio
         )
 
-        # 3. 定常与非定常载荷分离
-        steady_load, unsteady_load = self.load_separator.separate_load_noise(
-            load_spectrum,
-            thickness_spectrum,
+        # 3. 定常与非定常载荷分离（相位约束法，使用复数频谱）
+        steady_load, unsteady_load, phase_stats = self.load_separator.separate_load_noise(
+            load_complex,
+            thickness_complex,
             fundamental_freq,
             max_harmonic_order,
-            harmonic_bandwidth_ratio
+            harmonic_bandwidth_ratio,
+            check_phase_consistency
         )
 
         # 4. 收集所有频谱
@@ -554,7 +537,8 @@ class SourceContributionAnalyzer:
             'band_results': band_results,
             'global_stats': global_stats,
             'harmonic_results': harmonic_results,
-            'detail_data': detail_data
+            'detail_data': detail_data,
+            'phase_stats': phase_stats if check_phase_consistency else None
         }
 
         return results

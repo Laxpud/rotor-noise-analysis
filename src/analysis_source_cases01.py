@@ -1,4 +1,4 @@
-# 算例具备频域数据（_FreqDomain.csv）后再运行此脚本
+# 算例具备频域数据（_FreqDomain.csv）和时域数据（_FF.csv）后再运行此脚本
 # 适用于仅有自由场信号的算例
 #
 # 本脚本用于对旋翼气动噪声进行源项频域贡献量化分析，主要包含以下功能：
@@ -16,8 +16,43 @@
 import numpy as np
 import pandas as pd
 from typing import Optional, List
+import os
 
 from analyzer.source_analyzer import SourceContributionAnalyzer
+from analyzer.utils import rfft
+
+
+def _load_time_domain(
+    file_path: str,
+    prefix: str
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    加载单自由场时域数据并计算FFT得到复数频谱（内部使用，对用户透明）
+    """
+    # 读取时域文件
+    time_file = os.path.join(file_path, f"{prefix}_FF.csv")
+    time_data = pd.read_csv(time_file)
+
+    # 转换为numpy数组，形状为(2, N)，第一行时间，第二行幅值
+    time_thick = np.vstack([time_data['Time'].values, time_data['Thickness'].values])
+    time_load = np.vstack([time_data['Time'].values, time_data['Load'].values])
+    time_total = np.vstack([time_data['Time'].values, time_data['Total'].values])
+
+    # 计算FFT，返回复数结果
+    freq, thick_complex, _, _ = rfft(time_thick, return_phase=False)
+    _, load_complex, _, _ = rfft(time_load, return_phase=False)
+    _, total_complex, _, _ = rfft(time_total, return_phase=False)
+
+    # 将复数FFT缩放至单边幅值谱（保留相位信息），与utils.rfft的幅值缩放一致
+    N = len(time_data)
+    thick_complex = thick_complex * (2.0 / N)
+    thick_complex[0] = thick_complex[0] / 2.0
+    load_complex = load_complex * (2.0 / N)
+    load_complex[0] = load_complex[0] / 2.0
+    total_complex = total_complex * (2.0 / N)
+    total_complex[0] = total_complex[0] / 2.0
+
+    return freq, thick_complex, load_complex, total_complex
 
 
 def SourceContributionAnalyze(
@@ -31,44 +66,57 @@ def SourceContributionAnalyze(
     band_fraction: int = 3,
     band_f_low: float = 10,
     band_f_high: float = 20000,
+    check_phase_consistency: bool = False
 ):
     """
-    源项频域贡献量化分析主函数
+    源项频域贡献量化分析主函数（基于相位约束法）
+    ⚠️ 使用逻辑和原有完全相同，仅内部实现升级为相位约束法
+    ⚠️ 要求除了原有_FreqDomain.csv外，同级目录下需存在对应的_FF.csv时域文件
 
     参数:
         file_path: 数据文件所在目录路径
-        filename_prefix: 要处理的文件名前缀列表（不包含_FreqDomain.csv后缀）
-        group_prefixes: 分组保存汇总数据的前缀列表（可选）
-        fundamental_freq: 基频（叶片通过频率），如不提供则自动识别
-        harmonic_bandwidth_ratio: 谐频带宽比（相对于谐频频率）
-        max_harmonic_order: 最大谐频阶数
-        band_type: 频带类型，'octave'（倍频程）或'custom'（自定义）
-        band_fraction: 倍频程分数，1=1倍频程，3=1/3倍频程，12=1/12倍频程
-        band_f_low: 最低分析频率
-        band_f_high: 最高分析频率
+        filename_prefix: 要处理的文件名前缀列表（不包含_FreqDomain.csv后缀，和原有完全一致）
+        group_prefixes: 分组保存汇总数据的前缀列表（可选，和原有完全一致）
+        fundamental_freq: 基频（叶片通过频率），如不提供则自动识别（和原有完全一致）
+        harmonic_bandwidth_ratio: 谐频带宽比（相对于谐频频率，和原有完全一致）
+        max_harmonic_order: 最大谐频阶数（和原有完全一致）
+        band_type: 频带类型，'octave'（倍频程）或'custom'（自定义，和原有完全一致）
+        band_fraction: 倍频程分数，1=1倍频程，3=1/3倍频程，12=1/12倍频程（和原有完全一致）
+        band_f_low: 最低分析频率（和原有完全一致）
+        band_f_high: 最高分析频率（和原有完全一致）
+        check_phase_consistency: 可选新增参数，是否检查相位一致性，会输出相位统计信息到日志，默认False
     """
     summary_list = []
 
     for prefix in filename_prefix:
         print(f"Processing {prefix}...")
 
-        # 读取频率域线性幅值数据
+        # 读取频率域线性幅值数据（保留原有读取逻辑，用于基频识别和兼容性验证）
         freq_domain_data = pd.read_csv(
-            f"{file_path}\\{prefix}_FreqDomain.csv", header=0, sep=","
+            os.path.join(file_path, f"{prefix}_FreqDomain.csv"), header=0, sep=","
         )
         freq = freq_domain_data["Frequency(Hz)"].values
-        amp_Thickness = freq_domain_data["amp_Thickness(Pa)"].values
-        amp_Load = freq_domain_data["amp_Load(Pa)"].values
-        amp_Total = freq_domain_data["amp_Total(Pa)"].values
 
-        # 初始化源项贡献分析器
+        # 自动加载时域数据计算复数频谱（内部自动完成，对用户透明）
+        _, thick_complex, load_complex, total_complex = _load_time_domain(file_path, prefix)
+
+        # 基频识别逻辑保持不变，和原有完全一致
+        if fundamental_freq is None:
+            amp_Total = freq_domain_data["amp_Total(Pa)"].values
+            from analyzer.analyzer import PeakFrequencyAnalyzer
+            peak_analyzer = PeakFrequencyAnalyzer(freq)
+            peak_result = peak_analyzer.analyze_spectrum(amp_Total, prominence=0.005)
+            fundamental_freq = peak_result["fundamental_freq"]
+            print(f"Automatically identified fundamental frequency: {fundamental_freq:.2f} Hz")
+
+        # 初始化源项贡献分析器（和原有完全一致）
         analyzer = SourceContributionAnalyzer(freq)
 
-        # 执行分析
+        # 执行分析（内部使用相位约束法，对用户透明）
         results = analyzer.analyze(
-            thickness_spectrum=amp_Thickness,
-            load_spectrum=amp_Load,
-            total_spectrum=amp_Total,
+            thickness_complex=thick_complex,
+            load_complex=load_complex,
+            total_complex=total_complex,
             fundamental_freq=fundamental_freq,
             harmonic_bandwidth_ratio=harmonic_bandwidth_ratio,
             max_harmonic_order=max_harmonic_order,
@@ -76,7 +124,16 @@ def SourceContributionAnalyze(
             band_fraction=band_fraction,
             band_f_low=band_f_low,
             band_f_high=band_f_high,
+            check_phase_consistency=check_phase_consistency
         )
+
+        # 输出相位一致性信息（如果启用，新增可选功能）
+        if check_phase_consistency and results.get('phase_stats') is not None:
+            phase_stats = results['phase_stats']
+            print(f"  Phase consistency stats:")
+            print(f"    Mean phase difference: {phase_stats['mean_phase_diff_deg']:.2f}°")
+            print(f"    Overall phase difference variance: {phase_stats['overall_phase_diff_variance_deg']:.4f}°²")
+            print(f"    Max per-harmonic phase difference variance: {phase_stats['max_phase_diff_variance_deg']:.4f}°²")
 
         # 1. 输出详细频率点数据
         detail_df = results["detail_data"]
@@ -341,16 +398,16 @@ if __name__ == "__main__":
     OBS_Position_list = np.array(
         [
             [0, 3, 0],
+            [0, 4, 0],
+            [0, 5, 0],
             [0, 3, -0.25],
-            [0, 3, -0.5],
-            [0, 3, -0.75],
-            [0, 4, 0.0],
             [0, 4, -0.25],
-            [0, 4, -0.5],
-            [0, 4, -0.75],
-            [0, 5, 0.0],
             [0, 5, -0.25],
+            [0, 3, -0.5],
+            [0, 4, -0.5],
             [0, 5, -0.5],
+            [0, 3, -0.75],
+            [0, 4, -0.75],
             [0, 5, -0.75],
         ]
     )
@@ -366,14 +423,17 @@ if __name__ == "__main__":
     ]
 
     # 可选：指定基频（叶片通过频率），如不指定则自动识别
-    # fundamental_freq = 25.0  # 示例值，请根据实际情况修改
+    fundamental_freq = 46.9698  # 示例值，请根据实际情况修改
 
-    # 运行分析
+    # 可选：是否检查相位一致性，默认不开启（新增可选功能）
+    check_phase_consistency = True
+
+    # 运行分析（调用方式和原有完全一致）
     SourceContributionAnalyze(
         file_path=file_path,
         filename_prefix=filename_prefix,
         group_prefixes=Filename_list,
-        fundamental_freq=46.9698,
-        harmonic_bandwidth_ratio=0.01,
+        fundamental_freq=fundamental_freq,
         max_harmonic_order=50,
+        check_phase_consistency=check_phase_consistency
     )

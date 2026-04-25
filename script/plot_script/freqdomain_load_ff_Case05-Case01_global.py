@@ -44,8 +44,8 @@ for OBS_Number in OBS_range:
     ax.set_xlabel(x_name)              # 设置X轴标签
     ax.set_ylabel(y_name)              # 设置Y轴标签
     # ----------- 线图
-    x_data_1, y_data_1 = data_1['Frequency(Hz)'], data_1['SPL(dB)']
-    x_data_2, y_data_2 = data_2['Frequency(Hz)'], data_2['SPL_FF(dB)']
+    x_data_1, y_data_1 = data_1['Frequency(Hz)'], data_1['SPL_Load(dB)']
+    x_data_2, y_data_2 = data_2['Frequency(Hz)'], data_2['SPL_FF_Load(dB)']
     ax.plot(x_data_1, y_data_1, label='OWSGE', color='grey', linestyle='-', alpha=0.9, zorder=2)
     ax.plot(x_data_2, y_data_2, label='IWSGE', color=colors[0], linestyle='--', alpha=0.9, zorder=1)
     x_min = min(x_data_1.min(), x_data_2.min())
