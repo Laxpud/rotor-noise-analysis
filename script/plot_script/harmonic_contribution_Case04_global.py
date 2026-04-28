@@ -44,7 +44,7 @@ for OBS_Number in OBS_range:
     ax.set_xlim([-1, 47])
     ax.xaxis.set_major_locator(MultipleLocator(5))
     ax.set_ylabel(y_name)              # 设置Y轴标签
-    ax.set_ylim([10, 110])
+    ax.set_ylim([0, 110])
     # 数据
     ax.scatter(data_1['Harmonic Order'], data_1['FF_Thickness SPL(dB)'], label='Thickness', color=colors[0], marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
     ax.scatter(data_1['Harmonic Order'], data_1['FF_Steady Load SPL(dB)'], label='Steady Load', color=colors[1], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
