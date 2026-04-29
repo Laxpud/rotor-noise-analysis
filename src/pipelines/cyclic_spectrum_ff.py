@@ -150,7 +150,8 @@ def run_cyclic_analysis(
             scd_export = csa.get_scd_3d_export()
             np.savez_compressed(f"{file_path}\\{prefix}_SCD_3D.npz",
                                 f=scd_export['f'], alpha=scd_export['alpha'],
-                                scd_magnitude=scd_export['scd_magnitude'])
+                                f_bpf=scd_export['f_bpf'], alpha_bpf=scd_export['alpha_bpf'],
+                                scd_power=scd_export['scd_power'], scd_psd=scd_export['scd_psd'])
             print(f"  Saved SCD 3D data")
 
         if 'coherence' in output:

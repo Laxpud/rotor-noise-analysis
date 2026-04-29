@@ -537,7 +537,7 @@ class CyclicSpectrumAnalyzer:
         """导出 SCD 为 3D 可视化格式.
 
         返回的数据结构适合绘制 waterfall / surface 图，
-        其中 x 轴为频率 f，y 轴为循环频率 α，z 轴为 |SCD|。
+        其中 x 轴为频率 f，y 轴为循环频率 α，z 轴为归一化后的 SCD 幅值。
 
         Returns
         -------
@@ -545,7 +545,10 @@ class CyclicSpectrumAnalyzer:
             包含以下键的字典:
             - 'f': 频率轴 (Hz), shape (N_freq,)
             - 'alpha': 循环频率轴 (Hz), shape (K_max+1,)
-            - 'scd_magnitude': |SCD| 幅值, shape (K_max+1, N_freq)
+            - 'f_bpf': BPF 归一化频率轴 f/BPF, shape (N_freq,)
+            - 'alpha_bpf': BPF 归一化循环频率轴 α/BPF (谐波阶次), shape (K_max+1,)
+            - 'scd_power': |SCD| / N0² (Pa²), 按采样点数归一化的功率谱, shape (K_max+1, N_freq)
+            - 'scd_psd': |SCD| / (N0²·Δf) (Pa²/Hz), 功率谱密度, shape (K_max+1, N_freq)
         """
         if self._scd is None:
             self.compute_scd()
@@ -554,8 +557,16 @@ class CyclicSpectrumAnalyzer:
         alpha_values = np.array([k * self.bpf for k in orders])
         scd_mag = np.array([np.abs(self._scd[k]) for k in orders])
 
+        # 按 N0² 归一化: scd_power = |SCD| / N0²  [Pa²]
+        scd_power = scd_mag / (self.N0 ** 2)
+        # 功率谱密度: scd_psd = scd_power / Δf  [Pa²/Hz]
+        scd_psd = scd_power / self._df
+
         return {
             'f': self._freq,
             'alpha': alpha_values,
-            'scd_magnitude': scd_mag,
+            'f_bpf': self._freq / self.bpf,
+            'alpha_bpf': alpha_values / self.bpf,
+            'scd_power': scd_power,
+            'scd_psd': scd_psd,
         }
