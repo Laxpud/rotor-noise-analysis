@@ -34,6 +34,10 @@ Cn/
 Plot/
 ref/
 
+# Pictures
+*.png
+*.svg
+
 # Logs
 logs/
 *.log

@@ -9,7 +9,7 @@ import os
 OBS_range = range(1, 13)
 # 获得当前脚本文件名并去掉扩展名, 并创建输出目录
 script_name = os.path.basename(__file__).split('.')[0]
-output_dir = os.path.join('plot', script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
@@ -19,9 +19,9 @@ for OBS_Number in OBS_range:
     x_name = 'Time (ms)'
     y_name = 'Sound Pressure (Pa)'
     # -----------
-    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv"
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case05\Case05_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_2_path = fr"data\Case05\Case05_Rotor_OBS{OBS_Number:04d}_FF.csv"   
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
     # ----------- 全局尺寸设置
     plt.style.use(['science'])
@@ -51,8 +51,8 @@ for OBS_Number in OBS_range:
     #ax.yaxis.set_major_locator(MaxNLocator(nbins=10))  # nbins参数控制大致刻度数量
     # ----------- 线图
     data_range = slice(0, 2700)
-    x_data_1, y_data_1 = data_1['Time'][data_range], data_1['Thickness'][data_range]
-    x_data_2, y_data_2 = data_2['Time'][data_range], data_2['Thickness'][data_range]
+    x_data_1, y_data_1 = data_1['Time'][data_range], data_1['Load'][data_range]
+    x_data_2, y_data_2 = data_2['Time'][data_range], data_2['Load'][data_range]
     ax.plot(x_data_1, y_data_1, label='OWSGE', color='grey', linestyle='-', alpha=0.9, zorder=2)
     ax.plot(x_data_2, y_data_2, label='IWSGE', color=colors[0], linestyle='--', alpha=0.9, zorder=3)
     x_min = min(x_data_1.min(), x_data_2.min())

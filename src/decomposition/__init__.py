@@ -33,6 +33,7 @@ from .frequency import FrequencySeparator
 from .phase_constraint import PhaseConstraintSeparator
 from .cyclic_spectrum import CyclicSpectrumAnalyzer
 from .contribution import SourceBandAnalyzer, SourceContributionAnalyzer
+from .harmonic_broadband import HarmonicBroadbandAnalyzer
 
 __all__ = [
     'FrequencySeparator',
@@ -40,4 +41,5 @@ __all__ = [
     'CyclicSpectrumAnalyzer',
     'SourceBandAnalyzer',
     'SourceContributionAnalyzer',
+    'HarmonicBroadbandAnalyzer',
 ]

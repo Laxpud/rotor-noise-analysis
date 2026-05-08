@@ -228,13 +228,6 @@ if __name__ == "__main__":
     file_path = r"Case01"
     Filename_list = ["Case01_Rotor"]
     OBS_Numbers = 12
-    OBS_Position_list = np.array([
-        [0, 3, 0], [0, 3, -0.25], [0, 3, -0.5], [0, 3, -0.75],
-        [0, 4, 0.0], [0, 4, -0.25], [0, 4, -0.5], [0, 4, -0.75],
-        [0, 5, 0.0], [0, 5, -0.25], [0, 5, -0.5], [0, 5, -0.75],
-    ])
-    if OBS_Numbers != len(OBS_Position_list):
-        raise ValueError("OBS_Numbers must be equal to the length of OBS_Position_list")
     filename_prefix = [f"{Filename_list[0]}_OBS{j + 1:04d}" for j in range(OBS_Numbers)]
     run_peak_analysis(file_path, filename_prefix)
     run_band_analysis(file_path, filename_prefix, group_prefixes=Filename_list)

@@ -9,7 +9,7 @@ import os
 OBS_range = range(1, 13)
 # 获得当前脚本文件名并去掉扩展名, 并创建输出目录
 script_name = os.path.basename(__file__).split('.')[0]
-output_dir = os.path.join('plot', script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
@@ -19,9 +19,9 @@ for OBS_Number in OBS_range:
     x_name = 'Harmonic Order'
     y_name = 'SPL (dB)'
     # -----------
-    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
+    data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case03\Case03_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
+    data_2_path = fr"data\Case03\Case03_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
 
     # ----------- 全局尺寸设置

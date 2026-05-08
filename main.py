@@ -63,6 +63,29 @@ def run_source_analysis(
     print("Source contribution analysis completed!")
 
 
+def run_harmonic_broadband_analysis(
+    file_path: str, filename_prefix: List[str],
+    group_prefixes: List[str] = None, has_reflection: bool = False,
+    fundamental_freq: float = None, max_harmonic_order: int = 30,
+    harmonic_bandwidth_ratio: float = 0.03,
+    band_fraction: int = 3, band_f_low: float = 10, band_f_high: float = 20000
+):
+    if has_reflection:
+        from pipelines.harmonic_broadband_ffsr import run_harmonic_broadband_analysis as _run
+    else:
+        from pipelines.harmonic_broadband_ff import run_harmonic_broadband_analysis as _run
+
+    print(f"Running harmonic-broadband analysis on {file_path}...")
+    if fundamental_freq:
+        print(f"Using specified fundamental frequency: {fundamental_freq:.2f} Hz")
+    _run(file_path=file_path, filename_prefix=filename_prefix,
+         group_prefixes=group_prefixes, fundamental_freq=fundamental_freq,
+         max_harmonic_order=max_harmonic_order,
+         harmonic_bandwidth_ratio=harmonic_bandwidth_ratio,
+         band_fraction=band_fraction, f_low=band_f_low, f_high=band_f_high)
+    print("Harmonic-broadband analysis completed!")
+
+
 def run_cyclic_analysis(
     file_path: str, filename_prefix: List[str],
     group_prefixes: List[str] = None, has_reflection: bool = False,
@@ -141,6 +164,22 @@ def main():
                    help='输出文件选择: scd,coherence,ics,spectrum,summary,all '
                         '(逗号分隔, 默认 ics,spectrum,summary)')
 
+    # 谐频/宽频统计分析
+    p = subparsers.add_parser('harmonic', help='谐频/宽频能量统计分析')
+    add_common(p)
+    p.add_argument('--fundamental-freq', type=float,
+                   help='基频/BPF (Hz)，不提供则自动检测')
+    p.add_argument('--max-harmonic-order', type=int, default=30,
+                   help='最大谐频阶数 (默认30)')
+    p.add_argument('--harmonic-bandwidth-ratio', type=float, default=0.03,
+                   help='谐频提取带宽比 (默认0.03)')
+    p.add_argument('--band-fraction', type=int, default=3,
+                   help='Octave band 分数 (默认3)')
+    p.add_argument('--band-f-low', type=float, default=10,
+                   help='Octave band 中心频率下限 Hz (默认10)')
+    p.add_argument('--band-f-high', type=float, default=20000,
+                   help='Octave band 中心频率上限 Hz (默认20000)')
+
     # 完整分析流程（peak+band+source）
     p = subparsers.add_parser('full', help='完整分析流程（peak+band+source）')
     add_common(p)
@@ -168,6 +207,12 @@ def main():
         run_cyclic_analysis(
             args.file_path, args.filename_prefix, args.group_prefixes,
             args.has_reflection, args.bpf, args.max_harmonic_order, args.output)
+    elif args.command == 'harmonic':
+        run_harmonic_broadband_analysis(
+            args.file_path, args.filename_prefix, args.group_prefixes,
+            args.has_reflection, args.fundamental_freq, args.max_harmonic_order,
+            args.harmonic_bandwidth_ratio, args.band_fraction,
+            args.band_f_low, args.band_f_high)
     elif args.command == 'full':
         run_full_analysis(
             args.file_path, args.filename_prefix, args.group_prefixes,

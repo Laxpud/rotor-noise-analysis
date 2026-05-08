@@ -19,7 +19,7 @@ import json
 import os
 
 # ---------- 用户配置 ----------
-CASE_DIR = r"Case05"
+CASE_DIR = r"data\Case05"
 CASE_PREFIX = "Case05_Rotor"
 THICKNESS_COL = "SPL_Thickness(dB)"  # FF-only: SPL_Thickness(dB); FF+SR: SPL_FF_Thickness(dB)
 # ------------------------------
@@ -27,7 +27,7 @@ THICKNESS_COL = "SPL_Thickness(dB)"  # FF-only: SPL_Thickness(dB); FF+SR: SPL_FF
 
 OBS_range = range(1, 13)
 script_name = os.path.basename(__file__).split(".")[0]
-output_dir = os.path.join("plot", script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:

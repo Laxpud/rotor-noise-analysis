@@ -9,7 +9,7 @@ import os
 OBS_range = range(1, 13)
 # 获得当前脚本文件名并去掉扩展名, 并创建输出目录
 script_name = os.path.basename(__file__).split('.')[0]
-output_dir = os.path.join('plot', script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
@@ -19,9 +19,9 @@ for OBS_Number in OBS_range:
     x_name = 'Time (ms)'
     y_name = 'Sound Pressure (Pa)'
     # -----------
-    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv"
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case05\Case05_Rotor_OBS{OBS_Number:04d}_FF.csv'
+    data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv"
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
     # ----------- 全局尺寸设置
     plt.style.use(['science'])
@@ -93,7 +93,7 @@ for OBS_Number in OBS_range:
         # frameon=False,                        # 可选：去掉图例边框，更美观
         # handletextpad=0.5,                    # 可选：图例符号与文字的间距
         # columnspacing=1.0                     # 可选：列之间的间距
-    )                                           # 显示图例                             # 显示图例
+    )                                           # 显示图例
     # -----------
     plt.savefig(os.path.join(output_dir, f'{filename}'), dpi=600)  # 保存图片
     #plt.show()                                     # 显示图形

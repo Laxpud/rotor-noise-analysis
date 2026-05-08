@@ -9,19 +9,19 @@ import os
 OBS_range = range(1, 13)
 # 获得当前脚本文件名并去掉扩展名, 并创建输出目录
 script_name = os.path.basename(__file__).split('.')[0]
-output_dir = os.path.join('plot', script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
      # -----------
     title = None
     filename = f'OBS{OBS_Number:04d}.png'
-    x_name = 'Harmonic Order'
+    x_name = 'Frequency (Hz)'
     y_name = 'SPL (dB)'
     # -----------
-    data_1_path = fr'.\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
+    data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FreqDomain.csv"
     data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-    data_2_path = fr'.\Case05\Case05_Rotor_OBS{OBS_Number:04d}_Harmonics.csv'
+    data_2_path = fr"data\Case05\Case05_Rotor_OBS{OBS_Number:04d}_FreqDomain.csv"
     data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
 
     # ----------- 全局尺寸设置
@@ -36,37 +36,22 @@ for OBS_Number in OBS_range:
         plot_config = json.load(f)
     # 提取自定义非标准参数，避免 rcParams 报错
     scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
-
     # 更新全局 rcParams
     plt.rcParams.update(plot_config)
 
     # -----------
     fig, ax = plt.subplots()  # 创建图形和坐标轴对象，尺寸由全局配置决定
     ax.set_xlabel(x_name)              # 设置X轴标签
-    ax.set_xlim([-1, 47])
-    ax.xaxis.set_major_locator(MultipleLocator(5))
     ax.set_ylabel(y_name)              # 设置Y轴标签
-    ax.set_ylim([10, 110])
-    # ----------- 散点图
-    # White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
-    ax.scatter(data_1['Harmonic Order'], data_1['SPL_Total(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
-    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Total(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
-    # 数据
-    ax.scatter(data_1['Harmonic Order'], data_1['SPL_Total(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
-    ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Total(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
-
-    # ----------- 差异连接线 (Difference Lines)
-    x = data_1['Harmonic Order']
-    y1 = data_1['SPL_Total(dB)']
-    y2 = data_2['SPL_FF_Total(dB)']
-    # 确保索引对齐 (Assuming aligned by row index as per user instruction)
-    # 如果需要按列对齐，应在此时确保 x, y1, y2 长度和顺序一致
-    mask_pos = y2 >= y1
-    mask_neg = y2 < y1
-    if mask_pos.any():
-        ax.vlines(x[mask_pos], y1[mask_pos], y2[mask_pos], colors=colors[0], alpha=0.8, zorder=1) # Red-ish
-    if mask_neg.any():
-        ax.vlines(x[mask_neg], y1[mask_neg], y2[mask_neg], colors='grey', alpha=0.5, zorder=1) # Green-ish
+    # ----------- 线图
+    x_data_1, y_data_1 = data_1['Frequency(Hz)'], data_1['SPL_Load(dB)']
+    x_data_2, y_data_2 = data_2['Frequency(Hz)'], data_2['SPL_FF_Load(dB)']
+    ax.plot(x_data_1, y_data_1, label='OWSGE', color='grey', linestyle='-', alpha=0.9, zorder=2)
+    ax.plot(x_data_2, y_data_2, label='IWSGE', color=colors[0], linestyle='--', alpha=0.9, zorder=1)
+    x_min = min(x_data_1.min(), x_data_2.min())
+    x_max = max(x_data_1.max(), x_data_2.max())
+    ax.set_xlim(left=x_min, right=x_max)
+    ax.set_ylim(bottom=0)
 
     # ----------- 图例
     ax.legend(

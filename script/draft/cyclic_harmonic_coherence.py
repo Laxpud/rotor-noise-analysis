@@ -22,14 +22,14 @@ import json
 import os
 
 # ---------- 用户配置 ----------
-CASE_DIR = r"Case01"
+CASE_DIR = r"data\Case01"
 CASE_PREFIX = "Case01_Rotor"
 # ------------------------------
 
 
 OBS_range = range(1, 13)
 script_name = os.path.basename(__file__).split(".")[0]
-output_dir = os.path.join("plot", script_name)
+output_dir = os.path.join(".\script\draft\plot", script_name)
 os.makedirs(output_dir, exist_ok=True)
 
 for OBS_Number in OBS_range:
