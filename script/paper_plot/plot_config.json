@@ -1,7 +1,14 @@
 {
-  "figure.figsize": [4, 2],
-  "figure.dpi": 1000,
+  "figure.figsize": [3.5, 2],
+  "figure.dpi": 96,
+  "figure.constrained_layout.use": false,
+  "savefig.dpi": 96,
+  "savefig.bbox": null,
+  "svg.fonttype": "none",
            
+  "font.family": "serif",
+  "font.serif": "Times New Roman",
+  "mathtext.fontset": "stix",
   "font.size": 7.5,
 
   "axes.titlesize": 7.5,              
@@ -31,6 +38,11 @@
 
   "legend.frameon": false,
   "legend.framealpha": 0.8,
+  "legend.borderaxespad": 0.0,
+  "legend.borderpad": 0.4,
+  "legend.handletextpad": 0.8,
+  "legend.labelspacing": 0.5,
+  "legend.columnspacing": 2.0,
 
 
   "scatter.linewidths": 0.35,

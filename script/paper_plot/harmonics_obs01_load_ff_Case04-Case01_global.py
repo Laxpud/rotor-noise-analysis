@@ -1,7 +1,6 @@
 import pandas as pd
 import scienceplots
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.ticker import MaxNLocator, MultipleLocator
 import json
 import os
@@ -39,50 +38,48 @@ MT = 0.12          # 顶部留白（给 legend）
 MB = 0.35          # 底部留白（给 x 轴标签）
 
 # -----------
-title = ""
+title = ''
 filename = f'{script_name}.svg'
-x_name = 'Azimuth (deg)'
-y_name = 'Load Noise Sound Pressure (Pa)'
+x_name = 'Harmonic Order'
+y_name = 'SPL (dB)'
 # -----------
-data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv"
+data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
 data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv"
+data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
 data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
 
 # -----------
 fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))  # 创建图形和坐标轴对象
 fig.subplots_adjust(left=ML/FIG_W, right=1-MR/FIG_W, top=1-MT/FIG_H, bottom=MB/FIG_H)
 ax.set_xlabel(x_name)              # 设置X轴标签
+ax.set_xlim([-1, 47])
+ax.xaxis.set_major_locator(MultipleLocator(5))
 ax.set_ylabel(y_name)              # 设置Y轴标签
-# ax.set_xlim(left = 213, right = 426)
-# ax.set_ylim(bottom = -2.3, top = 2.3)  # 设置Y轴范围
-ax.set_title(title) # 设置标题
-ax.xaxis.set_major_locator(MultipleLocator(50))
-# ax.xaxis.set_major_locator(MaxNLocator(nbins=9))  # nbins参数控制大致刻度数量
-# ax.yaxis.set_major_locator(MaxNLocator(nbins=10))  # nbins参数控制大致刻度数量
-# ----------- 线图
-data_range_4 = slice(180*4, 180*5)
-data_range_7 = slice(180*7, 180*8)
-# Assuming 180 points correspond to 360 degrees
-x_azimuth = np.linspace(0, 360, 180)
-# OWSGE Data
-y_owsge_4 = data_1['Load'].values[data_range_4]
-y_iwsge_4 = data_2['Load'].values[data_range_4]
-y_iwsge_7 = data_2['Load'].values[data_range_7]
-# Plotting
-ax.plot(x_azimuth, y_owsge_4, label='OWSGE', color='grey', linestyle='-', alpha=0.5, zorder=2)
-ax.plot(x_azimuth, y_iwsge_4, label='IWSGE 4th', color=colors[0], linestyle='--', alpha=0.8, zorder=2)
-ax.plot(x_azimuth, y_iwsge_7, label='IWSGE 7th', color=colors_wong[1], linestyle='-.', alpha=0.9, zorder=3)
-# Set X-axis limits
-ax.set_xlim(left=0, right=360)
-ax.xaxis.set_major_locator(MultipleLocator(60)) # Tick every 90 degrees
-# -----------
-
+ax.set_ylim([10, 110])
+# ----------- 散点图
+# White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
+ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
+ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
+# 数据
+ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
+ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
+# ----------- 差异连接线 (Difference Lines)
+x = data_1['Harmonic Order']
+y1 = data_1['SPL_Load(dB)']
+y2 = data_2['SPL_FF_Load(dB)']
+# 确保索引对齐 (Assuming aligned by row index as per user instruction)
+# 如果需要按列对齐，应在此时确保 x, y1, y2 长度和顺序一致
+mask_pos = y2 >= y1
+mask_neg = y2 < y1
+if mask_pos.any():
+    ax.vlines(x[mask_pos], y1[mask_pos], y2[mask_pos], colors=colors[0], alpha=0.8, zorder=1) # Red-ish
+if mask_neg.any():
+    ax.vlines(x[mask_neg], y1[mask_neg], y2[mask_neg], colors='grey', alpha=0.5, zorder=1) # Green-ish
 # ----------- 图例
 ax.legend(
-    ncol=4,                                 # 保持4列布局
+    ncol=2,                                 # 保持2列布局
     loc='lower right',                      # 图例自身的锚点：右下角
-    bbox_to_anchor=(1.05, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
+    bbox_to_anchor=(1.03, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
 )                                           # 显示图例
 # -----------
 plt.savefig(os.path.join(output_dir, f'{filename}'), transparent=True)  # 保存图片

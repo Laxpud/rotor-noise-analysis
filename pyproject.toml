@@ -45,3 +45,6 @@ packages = ["src"]
 name = "tsinghua"
 url = "https://pypi.tuna.tsinghua.edu.cn/simple"
 default = true
+
+[tool.basedpyright]
+typeCheckingMode = "off"
