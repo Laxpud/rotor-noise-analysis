@@ -32,10 +32,11 @@ plt.rcParams.update(plot_config)
 # ----------- 排版边距（绝对英寸，确保不同栏宽图片的绘图区域在 Inkscape 中对齐）
 FIG_W = 7.0       # 双栏 7.0，单栏 3.5
 FIG_H = 2.0
-ML = 0.35          # 左侧留白（给 y 轴标签）
+ML = 0.40          # 左侧留白（给 y 轴标签）
 MR = 0.15          # 右侧留白
-MT = 0.12          # 顶部留白（给 legend）
+MT = 0.20          # 顶部留白（给 legend）
 MB = 0.35          # 底部留白（给 x 轴标签）
+
 
 # -----------
 title = ""
@@ -102,7 +103,7 @@ for i in range(0, num_points, period_points):
 ax.legend(
     ncol=4,                                 # 保持4列布局
     loc='lower right',                      # 图例自身的锚点：右下角
-    bbox_to_anchor=(1.03, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
+    bbox_to_anchor=(1.02, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
 )                                           # 显示图例
 # -----------
 plt.savefig(os.path.join(output_dir, f'{filename}'), transparent=True)  # 保存图片
