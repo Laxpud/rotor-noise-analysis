@@ -7,7 +7,8 @@
 
 1. 分别计算 FF 和 SR 的厚度、载荷和总噪声的实 FFT 幅值/SPL 谱。
 2. 生成"合并"谱，其幅值为 FF 与 SR 幅值的直接和（相干叠加）。
-3. 计算 FF 和 SR 分量的逐周期总体 SPL 值。
+3. 生成 merged 时域压力历程，并计算 FF、SR 和 merged 的逐周期总体 SPL。
+4. 按观测点汇总 merged 总噪声 OASPL，输出 Tecplot 点格式空间分布文件。
 
 输入
 ------
@@ -19,6 +20,7 @@
 * ``{prefix}_merged.csv``     -- FF 和 SR 线性叠加后的时域压力历程。
 * ``{prefix}_FreqDomain.csv`` -- FF、SR 和合并分量的频率、幅值和 SPL。
 * ``{prefix}_SPLs.csv``       -- 各分量的逐周期总体 SPL（FF、SR 和 merged）。
+* ``{case}_SPL_merged.dat``   -- merged 总噪声 OASPL 的观测点空间分布。
 
 使用方式
 -----------
@@ -27,17 +29,151 @@
 """
 
 import os
+import re
 import sys
+from pathlib import Path
 
 # 确保上级 ``src`` 包在导入路径中。
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 
 import numpy as np
 import pandas as pd
-from signal_utils import rfft, SPLs
+from signal_utils import rfft, SPL, SPLs
 
 
 TIME_DOMAIN_COLUMNS = ["Time", "Thickness", "Load", "Total"]
+DEFAULT_OBSERVER_POSITIONS = np.array([
+    [0.0, 4.5, 0.0],
+    [0.0, 6.0, 0.0],
+    [0.0, 7.5, 0.0],
+    [0.0, 4.5, -0.375],
+    [0.0, 6.0, -0.375],
+    [0.0, 7.5, -0.375],
+    [0.0, 4.5, -0.750],
+    [0.0, 6.0, -0.750],
+    [0.0, 7.5, -0.750],
+    [0.0, 4.5, -1.125],
+    [0.0, 6.0, -1.125],
+    [0.0, 7.5, -1.125],
+])
+
+
+def _infer_oaspl_dat_name(filename_prefix, signal_type):
+    """从观测点前缀推断 Tecplot OASPL 文件名。
+
+    当前数据约定使用 ``Case05_Rotor_OBS0001`` 这类前缀，而已有空间
+    OASPL 文件使用 ``Case05_SPL_FF.dat`` / ``Case05_SPL_SR.dat`` 命名。
+    因此这里优先去掉 ``_Rotor_OBS####`` 后缀；若遇到历史或临时命名，
+    再退回到去掉 ``_OBS####`` 的通用规则。
+    """
+    if not filename_prefix:
+        raise ValueError("filename_prefix must contain at least one prefix.")
+
+    first_prefix = filename_prefix[0]
+    match = re.match(r"(.+?)_Rotor_OBS\d+$", first_prefix)
+    if match:
+        case_prefix = match.group(1)
+    else:
+        case_prefix = re.sub(r"_OBS\d+$", "", first_prefix)
+
+    return f"{case_prefix}_SPL_{signal_type}.dat"
+
+
+def write_merged_oaspl_dat(
+    file_path,
+    filename_prefix,
+    output_path=None,
+    observer_positions=None,
+    oaspl_values=None,
+):
+    """导出 merged 总噪声 OASPL 的 Tecplot 点文件。
+
+    Parameters
+    ----------
+    file_path : str or pathlib.Path
+        包含 ``{prefix}_merged.csv`` 文件的目录；当 ``oaspl_values`` 已经
+        由调用方提供时，仅用于推断默认输出路径。
+    filename_prefix : list of str
+        观测点文件名前缀列表，顺序必须与 ``observer_positions`` 和 IOBS
+        编号一致。
+    output_path : str or pathlib.Path, optional
+        输出 ``.dat`` 文件路径。默认写入 ``{case}_SPL_merged.dat``。
+    observer_positions : array-like, optional
+        观测点坐标，形状为 ``(N, 3)``，单位沿用现有 ``SPL_FF/SR.dat``。
+        若不传，则使用当前项目 12 个标准观测点坐标。
+    oaspl_values : array-like, optional
+        已计算好的 merged OASPL 值。若不传，则逐个读取
+        ``{prefix}_merged.csv`` 并对 ``Total`` 时域信号调用 ``SPL``。
+
+    Returns
+    -------
+    pathlib.Path
+        写出的 ``.dat`` 文件路径。
+    """
+    base_path = Path(file_path)
+    prefixes = list(filename_prefix)
+    if observer_positions is None:
+        if len(prefixes) > len(DEFAULT_OBSERVER_POSITIONS):
+            raise ValueError(
+                "observer_positions must be provided when exporting more than "
+                f"{len(DEFAULT_OBSERVER_POSITIONS)} observers."
+            )
+        positions = DEFAULT_OBSERVER_POSITIONS[:len(prefixes)]
+    else:
+        positions = np.asarray(observer_positions, dtype=float)
+
+    if len(prefixes) != len(positions):
+        raise ValueError(
+            "filename_prefix and observer_positions must have the same length."
+        )
+
+    if oaspl_values is None:
+        oaspl_values = []
+        for prefix in prefixes:
+            merged_path = base_path / f"{prefix}_merged.csv"
+            merged_data = pd.read_csv(merged_path, header=0)
+            missing = [
+                col for col in ("Time", "Total")
+                if col not in merged_data.columns
+            ]
+            if missing:
+                raise ValueError(
+                    f"{merged_path}: missing required columns: {missing}"
+                )
+            merged_total = np.vstack([
+                merged_data["Time"].values,
+                merged_data["Total"].values,
+            ])
+            oaspl_values.append(SPL(merged_total))
+
+    oaspl_values = np.asarray(oaspl_values, dtype=float)
+    if len(prefixes) != len(oaspl_values):
+        raise ValueError(
+            "filename_prefix and oaspl_values must have the same length."
+        )
+
+    if output_path is None:
+        output_path = base_path / _infer_oaspl_dat_name(prefixes, "merged")
+    else:
+        output_path = Path(output_path)
+
+    # Tecplot point 格式需要固定的三行头；后续每行对应一个观测点。
+    lines = [
+        'title="plot"',
+        'variables="X","Y","Z","SPL(dB)","IOBS"',
+        f"zone,i={len(prefixes)},datapacking=point",
+    ]
+    for obs_index, (position, spl_value) in enumerate(
+        zip(positions, oaspl_values), start=1
+    ):
+        x, y, z = position
+        lines.append(
+            f"{x:.5f} {y:.5f} {z:.5f} {spl_value:.5f} {obs_index}"
+        )
+
+    output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Export data to {output_path}")
+    return output_path
 
 
 def _build_merged_time_domain(ff_data, sr_data, prefix):
@@ -86,7 +222,8 @@ def _build_merged_time_domain(ff_data, sr_data, prefix):
 
 
 def run_preprocess_ffsr(
-    file_path, filename_prefix, cycles=15, export_merged_time=True
+    file_path, filename_prefix, cycles=15, export_merged_time=True,
+    export_merged_oaspl=True, observer_positions=None
 ):
     """对给定的观测点前缀列表执行 FF+SR 预处理。
 
@@ -108,12 +245,18 @@ def run_preprocess_ffsr(
         用于逐周期 SPL 的旋翼周期数。默认值为 15。
     export_merged_time : bool, optional
         是否输出 ``{prefix}_merged.csv`` 时域融合文件。默认输出。
+    export_merged_oaspl : bool, optional
+        是否输出 ``{case}_SPL_merged.dat`` 空间 OASPL 文件。默认输出。
+    observer_positions : array-like, optional
+        观测点坐标，形状为 ``(N, 3)``。默认使用项目标准 12 个观测点。
 
     Notes
     -----
     合并幅值通过*直接幅值相加*（相干叠加）获得，即
     ``amp_merged = amp_FF + amp_SR``。对应的 SPL 由合并幅值导出。
     """
+    merged_total_oaspl_values = []
+
     for prefix in filename_prefix:
         # -------- 自由场（FF） --------
         ff_data = pd.read_csv(f"{file_path}\\{prefix}_FF.csv", header=0, sep=',')
@@ -192,6 +335,7 @@ def run_preprocess_ffsr(
         spls_merged_thick = SPLs(merged_thick, cycles)
         spls_merged_load = SPLs(merged_load, cycles)
         spls_merged_total = SPLs(merged_total, cycles)
+        merged_total_oaspl_values.append(SPL(merged_total))
         spls_data = pd.DataFrame({
             'Cycle': range(1, cycles + 1),
             'SPL_FF_Thickness(dB)': spls_ff_thick,
@@ -206,6 +350,14 @@ def run_preprocess_ffsr(
         })
         spls_data.to_csv(f"{file_path}\\{prefix}_SPLs.csv", index=False)
         print(f"Export data to {file_path}\\{prefix}_SPLs.csv")
+
+    if export_merged_oaspl:
+        write_merged_oaspl_dat(
+            file_path,
+            filename_prefix,
+            observer_positions=observer_positions,
+            oaspl_values=merged_total_oaspl_values,
+        )
 
 
 if __name__ == "__main__":

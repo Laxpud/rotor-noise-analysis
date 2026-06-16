@@ -12,6 +12,7 @@
   "font.serif": ["Latin Modern Roman", "Times New Roman"],
   "mathtext.fontset": "cm",
   "font.size": 8,
+  "figure.labelsize": 8,
 
   "axes.titlesize": 8,              
   "axes.labelsize": 8,              
