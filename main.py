@@ -1,6 +1,7 @@
 """
 旋翼气动噪声分析工具主入口
 支持多种分析功能：
+  preprocess - 时域预处理，生成频域谱和逐周期 SPL
   peak   - 峰值频率与谐频分析
   band   - 频带能量贡献分析
   source - 源项频域贡献量化分析（相位约束法）
@@ -13,6 +14,23 @@ import sys
 from typing import List
 
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+
+
+def run_preprocess_analysis(
+    file_path: str, filename_prefix: List[str], cycles: int = 15,
+    has_reflection: bool = False, export_merged_time: bool = True
+):
+    if has_reflection:
+        from pipelines.preprocess_ffsr import run_preprocess_ffsr as _run
+    else:
+        from pipelines.preprocess_ff import run_preprocess_ff as _run
+
+    print(f"Running preprocessing on {file_path}...")
+    if has_reflection:
+        _run(file_path, filename_prefix, cycles, export_merged_time)
+    else:
+        _run(file_path, filename_prefix, cycles)
+    print("Preprocessing completed!")
 
 
 def run_peak_analysis(file_path: str, filename_prefix: List[str],
@@ -139,6 +157,14 @@ def main():
         subp.add_argument('--band-f-low', type=float, default=10)
         subp.add_argument('--band-f-high', type=float, default=20000)
 
+    # 时域预处理
+    p = subparsers.add_parser('preprocess', help='时域预处理')
+    add_common(p)
+    p.add_argument('--cycles', type=int, default=15,
+                   help='用于逐周期 SPL 的旋翼周期数 (默认15)')
+    p.add_argument('--no-merged-time', action='store_true',
+                   help='反射模式下不输出 FF+SR 融合时域 CSV')
+
     # 峰值频率与谐频分析
     p = subparsers.add_parser('peak', help='峰值频率与谐频分析')
     add_common(p)
@@ -191,7 +217,11 @@ def main():
         parser.print_help()
         return
 
-    if args.command == 'peak':
+    if args.command == 'preprocess':
+        run_preprocess_analysis(
+            args.file_path, args.filename_prefix, args.cycles,
+            args.has_reflection, not args.no_merged_time)
+    elif args.command == 'peak':
         run_peak_analysis(args.file_path, args.filename_prefix, args.has_reflection)
     elif args.command == 'band':
         run_band_analysis(args.file_path, args.filename_prefix,

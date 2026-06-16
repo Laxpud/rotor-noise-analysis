@@ -1,12 +1,13 @@
 import pandas as pd
 import scienceplots
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.ticker import MaxNLocator, MultipleLocator
 import json
 import os
 
 
-OBS_Number = 1
+OBS_Number = 12
 # 获得当前脚本文件名并去掉扩展名, 并创建输出目录
 script_name = os.path.basename(__file__).split('.')[0]
 output_dir = r".\script\paper_plot"
@@ -32,55 +33,57 @@ plt.rcParams.update(plot_config)
 # ----------- 排版边距（绝对英寸，确保不同栏宽图片的绘图区域在 Inkscape 中对齐）
 FIG_W = 3.5       # 双栏 7.0，单栏 3.5
 FIG_H = 2.0
-ML = 0.40          # 左侧留白（给 y 轴标签）
-MR = 0.15          # 右侧留白
-MT = 0.20          # 顶部留白（给 legend）
+ML = 0.45          # 左侧留白（给 y 轴标签）
+MR = 0.1          # 右侧留白
+MT = 0.1          # 顶部留白
 MB = 0.35          # 底部留白（给 x 轴标签）
 
 # -----------
-title = ''
+title = ""
 filename = f'{script_name}.svg'
-x_name = 'Harmonic Order'
-y_name = 'Load Noise SPL (dB)'
+x_name = 'Azimuth (deg)'
+y_name = 'Sound Pressure (Pa)'
 # -----------
-data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
+data_1_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv"
 data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_Harmonics.csv"
+data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_SR.csv"
 data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
+data_3_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_merged.csv"
+data_3 = pd.read_csv(data_3_path, sep=",", header=0)  # 读取数据
 
 # -----------
 fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))  # 创建图形和坐标轴对象
 fig.subplots_adjust(left=ML/FIG_W, right=1-MR/FIG_W, top=1-MT/FIG_H, bottom=MB/FIG_H)
+ax.set_title(title) # 设置标题
+
+# ----------- 线图
+data_range = slice(180*3+30, 180*3+120)
+# Assuming 180 points correspond to 360 degrees
+x_azimuth = np.linspace(0, 180, 90)
+# OWSGE Data
+y_1 = data_1['Load'].values[data_range]
+y_2 = data_2['Load'].values[data_range]
+y_3 = data_3['Load'].values[data_range]
+# Plotting
+ax.plot(x_azimuth, y_1, label='Free-field', color='grey', linestyle='-', alpha=0.5, zorder=2)
+ax.plot(x_azimuth, y_2, label='Reflected', color=colors[0], linestyle='--', alpha=0.8, zorder=2)
+ax.plot(x_azimuth, y_3, label='Combined', color=colors_wong[1], linestyle='-.', alpha=0.9, zorder=3)
+# Set X-axis limits
 ax.set_xlabel(x_name)              # 设置X轴标签
-ax.set_xlim([-1, 47])
-ax.xaxis.set_major_locator(MultipleLocator(5))
+ax.set_xlim(left=0, right=180)
+ax.xaxis.set_major_locator(MultipleLocator(30)) # Tick every 30 degrees
 ax.set_ylabel(y_name)              # 设置Y轴标签
-ax.set_ylim([10, 110])
-# ----------- 散点图
-# White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
-ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
-ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
-# 数据
-ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
-ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], label='IWSGE', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
-# ----------- 差异连接线 (Difference Lines)
-x = data_1['Harmonic Order']
-y1 = data_1['SPL_Load(dB)']
-y2 = data_2['SPL_FF_Load(dB)']
-# 确保索引对齐 (Assuming aligned by row index as per user instruction)
-# 如果需要按列对齐，应在此时确保 x, y1, y2 长度和顺序一致
-mask_pos = y2 >= y1
-mask_neg = y2 < y1
-if mask_pos.any():
-    ax.vlines(x[mask_pos], y1[mask_pos], y2[mask_pos], colors=colors[0], alpha=0.8, zorder=1) # Red-ish
-if mask_neg.any():
-    ax.vlines(x[mask_neg], y1[mask_neg], y2[mask_neg], colors='grey', alpha=0.5, zorder=1) # Green-ish
+ymin, ymax, ystep = -4, 6, 2
+ax.set_ylim([ymin, ymax])
+ax.set_yticks(np.arange(ymin, ymax + 1, ystep))
+# -----------
+
 # ----------- 图例
 ax.legend(
-    ncol=2,                                 # 保持2列布局
-    loc='lower right',                      # 图例自身的锚点：右下角
-    bbox_to_anchor=(1.03, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
-)                                           # 显示图例
+    ncol=1,                                 # 保持ncol列布局
+    loc='upper left',                      # 图例自身的锚点
+    bbox_to_anchor=(0.02, 0.98),              # 锚定到坐标轴的位置
+)                                          # 显示图例
 # -----------
 plt.savefig(os.path.join(output_dir, f'{filename}'), transparent=True)  # 保存图片
 #plt.show()                                     # 显示图形

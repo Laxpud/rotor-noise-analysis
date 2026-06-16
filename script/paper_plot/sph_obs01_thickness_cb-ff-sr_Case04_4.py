@@ -33,57 +33,57 @@ plt.rcParams.update(plot_config)
 # ----------- 排版边距（绝对英寸，确保不同栏宽图片的绘图区域在 Inkscape 中对齐）
 FIG_W = 3.5       # 双栏 7.0，单栏 3.5
 FIG_H = 2.0
-ML = 0.40          # 左侧留白（给 y 轴标签）
-MR = 0.15          # 右侧留白
-MT = 0.20          # 顶部留白（给 legend）
+ML = 0.45          # 左侧留白（给 y 轴标签）
+MR = 0.1          # 右侧留白
+MT = 0.1          # 顶部留白
 MB = 0.35          # 底部留白（给 x 轴标签）
 
 # -----------
 title = ""
 filename = f'{script_name}.svg'
 x_name = 'Azimuth (deg)'
-y_name = 'Load Noise Sound Pressure (Pa)'
+y_name = 'Sound Pressure (Pa)'
 # -----------
-data_1_path = fr"data\Case01\Case01_Rotor_OBS{OBS_Number:04d}_FF.csv"
+data_1_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv"
 data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
-data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_FF.csv"
+data_2_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_SR.csv"
 data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
+data_3_path = fr"data\Case04\Case04_Rotor_OBS{OBS_Number:04d}_merged.csv"
+data_3 = pd.read_csv(data_3_path, sep=",", header=0)  # 读取数据
 
 # -----------
 fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))  # 创建图形和坐标轴对象
 fig.subplots_adjust(left=ML/FIG_W, right=1-MR/FIG_W, top=1-MT/FIG_H, bottom=MB/FIG_H)
-ax.set_xlabel(x_name)              # 设置X轴标签
-ax.set_ylabel(y_name)              # 设置Y轴标签
-# ax.set_xlim(left = 213, right = 426)
-# ax.set_ylim(bottom = -2.3, top = 2.3)  # 设置Y轴范围
 ax.set_title(title) # 设置标题
-ax.xaxis.set_major_locator(MultipleLocator(50))
-# ax.xaxis.set_major_locator(MaxNLocator(nbins=9))  # nbins参数控制大致刻度数量
-# ax.yaxis.set_major_locator(MaxNLocator(nbins=10))  # nbins参数控制大致刻度数量
+
 # ----------- 线图
-data_range_1 = slice(180*3, 180*4)
-data_range_2 = slice(180*11, 180*12)
+data_range = slice(180*3+30, 180*3+120)
 # Assuming 180 points correspond to 360 degrees
-x_azimuth = np.linspace(0, 360, 180)
+x_azimuth = np.linspace(0, 180, 90)
 # OWSGE Data
-y_owsge_1 = data_1['Load'].values[data_range_1]
-y_iwsge_1 = data_2['Load'].values[data_range_1]
-y_iwsge_2 = data_2['Load'].values[data_range_2]
+y_1 = data_1['Thickness'].values[data_range]
+y_2 = data_2['Thickness'].values[data_range]
+y_3 = data_3['Thickness'].values[data_range]
 # Plotting
-ax.plot(x_azimuth, y_owsge_1, label='OWSGE', color='grey', linestyle='-', alpha=0.5, zorder=2)
-ax.plot(x_azimuth, y_iwsge_1, label='IWSGE 4th', color=colors[0], linestyle='--', alpha=0.8, zorder=2)
-ax.plot(x_azimuth, y_iwsge_2, label='IWSGE 12th', color=colors_wong[1], linestyle='-.', alpha=0.9, zorder=3)
+ax.plot(x_azimuth, y_1, label='Free-field', color='grey', linestyle='-', alpha=0.5, zorder=2)
+ax.plot(x_azimuth, y_2, label='Reflected', color=colors[0], linestyle='--', alpha=0.8, zorder=2)
+ax.plot(x_azimuth, y_3, label='Combined', color=colors_wong[1], linestyle='-.', alpha=0.9, zorder=3)
 # Set X-axis limits
-ax.set_xlim(left=0, right=360)
-ax.xaxis.set_major_locator(MultipleLocator(60)) # Tick every 90 degrees
+ax.set_xlabel(x_name)              # 设置X轴标签
+ax.set_xlim(left=0, right=180)
+ax.xaxis.set_major_locator(MultipleLocator(30)) # Tick every 30 degrees
+ax.set_ylabel(y_name)              # 设置Y轴标签
+ymin, ymax, ystep = -3, 1, 1
+ax.set_ylim([ymin, ymax])
+ax.set_yticks(np.arange(ymin, ymax + 1, ystep))
 # -----------
 
 # ----------- 图例
 ax.legend(
-    ncol=4,                                 # 保持4列布局
-    loc='lower right',                      # 图例自身的锚点：右下角
-    bbox_to_anchor=(1.03, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
-)                                           # 显示图例
+    ncol=1,                                 # 保持ncol列布局
+    loc='lower right',                      # 图例自身的锚点
+    bbox_to_anchor=(0.98, 0.02),              # 锚定到坐标轴的位置
+)                                          # 显示图例
 # -----------
 plt.savefig(os.path.join(output_dir, f'{filename}'), transparent=True)  # 保存图片
 #plt.show()                                     # 显示图形

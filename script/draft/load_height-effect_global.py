@@ -1,0 +1,130 @@
+import pandas as pd
+import numpy as np
+import scienceplots
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MultipleLocator
+import json
+import os
+
+
+# 获得当前脚本文件名并去掉扩展名, 并创建输出目录
+script_name = os.path.basename(__file__).split('.')[0]
+output_dir = r".\script\paper_plot"
+os.makedirs(output_dir, exist_ok=True)
+
+# ----------- 全局尺寸设置
+plt.style.use(['science'])
+# 获取当前颜色循环
+prop_cycle = plt.rcParams['axes.prop_cycle']
+colors = prop_cycle.by_key()['color']
+# 读取全局绘图配置文件
+# 使用 os.path.dirname(__file__) 获取当前脚本所在目录，确保找到同目录下的 json 文件
+json_path = os.path.join(os.path.dirname(__file__), 'plot_config.json')
+with open(json_path, 'r', encoding='utf-8') as f:
+    plot_config = json.load(f)
+# 提取自定义非标准参数，避免 rcParams 报错
+scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
+palettes = plot_config.pop('palettes', {})  # 自定义调色板，不能传 rcParams
+colors_wong = palettes.get('wong', [])  # 直接从全局配置中获取颜色列表
+# 更新全局 rcParams
+plt.rcParams.update(plot_config)
+
+# ----------- 排版边距（绝对英寸，确保不同栏宽图片的绘图区域在 Inkscape 中对齐）
+FIG_W = 7.0       # 双栏 7.0，单栏 3.5
+FIG_H = 2.0
+ML = 0.40          # 左侧留白（给 y 轴标签）
+MR = 0.15          # 右侧留白
+MT = 0.20          # 顶部留白（给 legend）
+MB = 0.35          # 底部留白（给 x 轴标签）
+
+
+# -----------
+title = ""
+filename = f'{script_name}.svg'
+x_name = 'Azimuth angle (deg)'
+y_name = 'Lift (N)'
+# -----------
+data_1_path = fr"data\load\load_Case01.csv"
+data_1 = pd.read_csv(data_1_path, sep=",", header=0)  # 读取数据
+data_2_path = fr"data\load\load_Case02.csv"
+data_2 = pd.read_csv(data_2_path, sep=",", header=0)  # 读取数据
+data_3_path = fr"data\load\load_Case03.csv"
+data_3 = pd.read_csv(data_3_path, sep=",", header=0)  # 读取数据
+data_4_path = fr"data\load\load_Case04.csv"
+data_4 = pd.read_csv(data_4_path, sep=",", header=0)  # 读取数据
+data_5_path = fr"data\load\load_Case05.csv"
+data_5 = pd.read_csv(data_5_path, sep=",", header=0)  # 读取数据
+
+# -----------
+fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))  # 创建图形和坐标轴对象
+fig.subplots_adjust(left=ML/FIG_W, right=1-MR/FIG_W, top=1-MT/FIG_H, bottom=MB/FIG_H)
+ax.set_xlabel(x_name)              # 设置X轴标签
+ax.set_ylabel(y_name)              # 设置Y轴标签
+# ax.set_xlim(left = 213, right = 426)
+# ax.set_ylim(bottom = -2.3, top = 2.3)  # 设置Y轴范围
+ax.set_title(title) # 设置标题
+ax.xaxis.set_major_locator(MultipleLocator(180))
+#ax.yaxis.set_major_locator(MaxNLocator(nbins=10))  # nbins参数控制大致刻度数量
+# ----------- 线图
+# 取最后15*180个数据。Python slice 的 stop 不包含在内，因此 1800:4500 会取到第4499行。
+force_z_col = 'PureRotor ForceZ Monitor: PureRotor ForceZ Monitor (N)'
+azimuth_start = 0
+azimuth_end = 2700
+azimuth_points = azimuth_end - azimuth_start
+case01_shift_points = 900
+data_range = slice(1800, 1800 + azimuth_points)
+data_1_range = slice(data_range.start - case01_shift_points, data_range.stop - case01_shift_points)
+azimuth = np.linspace(azimuth_start, azimuth_end, azimuth_points)
+
+
+def slice_force_z(data, data_slice, case_name):
+    y_data = data[force_z_col].iloc[data_slice].reset_index(drop=True)
+    expected_points = data_slice.stop - data_slice.start
+    if len(y_data) != expected_points:
+        raise ValueError(
+            f'{case_name}: slice {data_slice.start}:{data_slice.stop} should contain '
+            f'{expected_points} points, got {len(y_data)}.'
+        )
+    if len(y_data) != azimuth_points:
+        raise ValueError(f'{case_name}: expected {azimuth_points} azimuth points, got {len(y_data)}.')
+    last_included_idx = data_slice.stop - 1
+    last_available_idx = len(data) - 1
+    if last_included_idx != last_available_idx:
+        raise ValueError(
+            f'{case_name}: slice includes source row {last_included_idx} as the last point, '
+            f'but the CSV last row is {last_available_idx}.'
+        )
+    return y_data
+
+
+y_data_1 = slice_force_z(data_1, data_1_range, 'Case01')
+y_data_2 = slice_force_z(data_2, data_range, 'Case02')
+y_data_3 = slice_force_z(data_3, data_range, 'Case03')
+y_data_4 = slice_force_z(data_4, data_range, 'Case04')
+y_data_5 = slice_force_z(data_5, data_range, 'Case05')
+ax.plot(azimuth, y_data_1, label='OWSGE', color='grey', linestyle='-', alpha=0.9, zorder=1)
+ax.plot(azimuth, y_data_2, label='IWSGE-2.0R', color=colors_wong[2], linestyle=':', alpha=0.9, zorder=2)
+ax.plot(azimuth, y_data_3, label='IWSGE-1.5R', color=colors_wong[1], linestyle='-.', alpha=0.9, zorder=3)
+ax.plot(azimuth, y_data_4, label='IWSGE-1.0R', color=colors[0], linestyle='--',  alpha=0.9, zorder=4)
+ax.plot(azimuth, y_data_5, label='IWSGE-0.5R', color=colors_wong[3], linestyle=(0, (8, 2, 1.5, 2, 1.5, 2)),  alpha=0.9, zorder=5)
+ax.set_xlim(left=azimuth_start, right=azimuth_end)
+# -----------
+# Add alternating background color blocks
+period_degrees = 180
+for block_start in range(azimuth_start, azimuth_end, period_degrees):
+    block_idx = (block_start - azimuth_start) // period_degrees
+    if block_idx % 2 == 0:
+        block_end = min(block_start + period_degrees, azimuth_end)
+        ax.axvspan(block_start, block_end, facecolor='gray', alpha=0.1, zorder=0, linewidth=0)
+# -----------
+
+# ----------- 图例
+ax.legend(
+    ncol=5,                                 # 保持4列布局
+    loc='lower right',                      # 图例自身的锚点：右下角
+    bbox_to_anchor=(1.02, 1.0),              # 锚定到坐标轴的(1,1.0)位置（x轴最右、y轴最上）
+)                                           # 显示图例
+# -----------
+plt.savefig(os.path.join(output_dir, f'{filename}'), transparent=True)  # 保存图片
+#plt.show()                                     # 显示图形
+print(f"Export plot: {os.path.join(output_dir, f'{filename}')}")

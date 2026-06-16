@@ -31,7 +31,7 @@ import pandas as pd
 from signal_utils import rfft, SPLs
 
 
-def run_preprocess_ff(file_path, filename_prefix, cycles=5):
+def run_preprocess_ff(file_path, filename_prefix, cycles=15):
     """对给定的观测点前缀列表执行 FF 预处理。
 
     对于每个观测点前缀，该函数：
@@ -92,7 +92,7 @@ def run_preprocess_ff(file_path, filename_prefix, cycles=5):
 
 if __name__ == "__main__":
     # ---- 直接执行示例 ----
-    file_path = r"Case01"
+    file_path = r"data\Case01"
     Filename_list = ["Case01_Rotor"]
     OBS_Numbers = 12
     filename_prefix = [f"{Filename_list[0]}_OBS{j + 1:04d}" for j in range(OBS_Numbers)]

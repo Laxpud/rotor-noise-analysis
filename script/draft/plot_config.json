@@ -1,18 +1,27 @@
 {
-  "figure.figsize": [4, 2],
-  "figure.dpi": 1000,
-           
-  "font.size": 7.5,
+  "figure.figsize": [3.5, 2],
+  "figure.dpi": 96,
+  "figure.constrained_layout.use": false,
+  "savefig.dpi": 96,
+  "savefig.bbox": null,
+  "svg.fonttype": "none",
+  "text.usetex": true,
+  "text.latex.preamble": "\\usepackage{lmodern}",
 
-  "axes.titlesize": 7.5,              
-  "axes.labelsize": 7.5,              
-  "axes.linewidth": 0.35, 
-  "axes.labelpad": 3.0,            
-  "axes.grid": true,                 
+  "font.family": "serif",
+  "font.serif": ["Latin Modern Roman", "Times New Roman"],
+  "mathtext.fontset": "cm",
+  "font.size": 8,
+
+  "axes.titlesize": 8,
+  "axes.labelsize": 8,
+  "axes.linewidth": 0.35,
+  "axes.labelpad": 3.0,
+  "axes.grid": true,
   "grid.alpha": 0.3,
   "grid.linewidth": 0.35,
   "grid.linestyle": "-",
-  
+
   "xtick.top": true,
   "xtick.bottom": true,
   "xtick.major.size": 1.5,
@@ -31,7 +40,19 @@
 
   "legend.frameon": false,
   "legend.framealpha": 0.8,
+  "legend.borderaxespad": 0.0,
+  "legend.borderpad": 0.4,
+  "legend.handletextpad": 0.8,
+  "legend.labelspacing": 0.5,
+  "legend.columnspacing": 2.0,
 
 
-  "scatter.linewidths": 0.35
+  "scatter.linewidths": 0.35,
+
+  "palettes": {
+    "wong": ["#000000", "#E69F00", "#56B4E9", "#009E73",
+             "#F0E442", "#0072B2", "#D55E00"],
+    "nature": ["#E64B35", "#4DBBD5", "#00A087", "#3C5488",
+               "#F39B7F", "#8491B4", "#91D1C2", "#DC0000", "#7E6148", "#B09C85"]
+  }
 }
