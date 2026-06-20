@@ -36,7 +36,6 @@ with open(json_path, 'r', encoding='utf-8') as f:
     plot_config = json.load(f)
 # plot_config.json 中包含一些自定义键，不属于 matplotlib rcParams。
 # 在更新 rcParams 前必须先 pop 出来，否则 plt.rcParams.update 会报未知参数错误。
-scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
 palettes = plot_config.pop('palettes', {})  # 自定义调色板，不能传 rcParams。
 colors_wong = palettes.get('wong', [])  # Wong 调色板用于区分多个 Case，并保持色盲友好。
 # 更新全局 rcParams，使字号、线宽、网格、LaTeX 字体等设置对本脚本全部图元生效。
@@ -210,10 +209,11 @@ for obs_number in obs_numbers:
     ax.text(
         0.97,
         0.92,
-        f'OBS {obs_number:02d}',
+        rf'\textbf{{OBS-{obs_number:02d}}}',
         transform=ax.transAxes,
         ha='right',
         va='top',
+        fontweight='bold',
         zorder=4,
     )
 
@@ -235,7 +235,7 @@ for obs_number in obs_numbers:
         ax.tick_params(labelbottom=False)
 
 # 全图公共 x 轴标签。使用 supxlabel 而不是单独给每个子图设置 xlabel，避免重复文字。
-fig.supxlabel(x_name, y=0.02)
+fig.supxlabel(x_name, y=0.00)
 
 # ----------- 图例
 # 图例放在矩阵上方右侧，与其他 all-height 对比图保持类似布局。

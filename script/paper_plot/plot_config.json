@@ -37,7 +37,8 @@
   "ytick.minor.width": 0.35,
 
   "lines.linewidth": 0.75,
-  "lines.markersize": 3,
+  "lines.markersize": 3.3,
+  "lines.markeredgewidth": 0.35,
 
   "legend.frameon": false,
   "legend.framealpha": 0.8,
@@ -46,9 +47,6 @@
   "legend.handletextpad": 0.8,
   "legend.labelspacing": 0.5,
   "legend.columnspacing": 2.0,
-
-
-  "scatter.linewidths": 0.35,
 
   "palettes": {
     "wong": ["#000000", "#E69F00", "#56B4E9", "#009E73",

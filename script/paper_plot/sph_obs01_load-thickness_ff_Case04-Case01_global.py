@@ -23,7 +23,6 @@ json_path = os.path.join(os.path.dirname(__file__), 'plot_config.json')
 with open(json_path, 'r', encoding='utf-8') as f:
     plot_config = json.load(f)
 # 提取自定义非标准参数，避免 rcParams 报错
-scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
 palettes = plot_config.pop('palettes', {})  # 自定义调色板，不能传 rcParams
 colors_wong = palettes.get('wong', [])  # 直接从全局配置中获取颜色列表
 # 更新全局 rcParams

@@ -23,7 +23,6 @@ json_path = os.path.join(os.path.dirname(__file__), 'plot_config.json')
 with open(json_path, 'r', encoding='utf-8') as f:
     plot_config = json.load(f)
 # 提取自定义非标准参数，避免 rcParams 报错
-scatter_lw = plot_config.pop('scatter.linewidths', 1.0) # 若没有此参数，则默认为 1.0
 palettes = plot_config.pop('palettes', {})  # 自定义调色板，不能传 rcParams
 colors_wong = palettes.get('wong', [])  # 直接从全局配置中获取颜色列表
 # 更新全局 rcParams
@@ -64,14 +63,14 @@ ax.set_ylabel(y_name)              # 设置Y轴标签
 ax.set_ylim([10, 110])
 # ----------- 散点图
 # 数据
-ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linewidths=scatter_lw)
-ax.scatter(data_3['Harmonic Order'], data_3['SPL_SR_Load(dB)'], label='IWSGE-1.5R', color=colors_wong[1], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
-ax.scatter(data_4['Harmonic Order'], data_4['SPL_SR_Load(dB)'], label='IWSGE-2.0R', color=colors[0], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
-ax.scatter(data_5['Harmonic Order'], data_5['SPL_SR_Load(dB)'], label='IWSGE-2.5R', color=colors_wong[3], marker='s', alpha=0.8, zorder=2, linewidths=scatter_lw)
+ax.plot(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], label='OWSGE', color='grey', marker='o', alpha=0.5, zorder=3, linestyle='none')
+ax.plot(data_3['Harmonic Order'], data_3['SPL_SR_Load(dB)'], label='IWSGE-1.5R', color=colors_wong[1], marker='s', alpha=0.8, zorder=2, linestyle='none')
+ax.plot(data_4['Harmonic Order'], data_4['SPL_SR_Load(dB)'], label='IWSGE-2.0R', color=colors[0], marker='s', alpha=0.8, zorder=2, linestyle='none')
+ax.plot(data_5['Harmonic Order'], data_5['SPL_SR_Load(dB)'], label='IWSGE-2.5R', color=colors_wong[3], marker='s', alpha=0.8, zorder=2, linestyle='none')
 # # ----------- 差异连接线 (Difference Lines)
 # White mask to hide lines inside markers (zorder=1.5, between lines and visible points)
-# ax.scatter(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linewidths=scatter_lw)
-# ax.scatter(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linewidths=scatter_lw)
+# ax.plot(data_1['Harmonic Order'], data_1['SPL_Load(dB)'], color='white', marker='o', alpha=1, zorder=1.5, linestyle='none')
+# ax.plot(data_2['Harmonic Order'], data_2['SPL_FF_Load(dB)'], color='white', marker='s', alpha=1, zorder=1.5, linestyle='none')
 # x = data_1['Harmonic Order']
 # y1 = data_1['SPL_Load(dB)']
 # y2 = data_2['SPL_FF_Load(dB)']
